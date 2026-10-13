@@ -1,0 +1,8 @@
+config:
+  oci:region: eu-frankfurt-1
+  k3s:compartment_ocid: ocid1.tenancy.oc1..aaaaaaaaj3ilwrc64pvupxslhualmkrlp5w7qfqq7tiyeweebwyiakinjxqa
+  k3s:availability_domain: JPtx:EU-FRANKFURT-1-AD-1
+  k3s:k3s_version: v1.36.5+k3s1
+  k3s:ssh_public_keys:
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDXx2yoM90ZD4d54VnU1CdpOV73AHyI+RpIoNSlBCYMaYcEo1k0IByJ8/Vwg0jgug1j4xb++LF512D4ZkzaXp/eGtHssOHMp/d6Ossm2KgMesal7V08zdUa37HHnn3A0pHMojdQFCefxYiQF+wO4fEEKvSD3mPGKDnaLbl35M2qZ4daVdsmk8K0QX7aSHTxkxIkkPLsWYDZs/FwLziWRTFSdSkd18o/OHnEEvjVyAiPCjut6Il8Fyar8xR6Oi8zsWor24L515WJTT/ABtZ+Su9cAek8b4vFBhYw+yiAi2O6n98UNi+kWOhPIwMUGDopa4GgTo6WOCutDdL+/VxfPF7F
+encryptionsalt: v1:BFWXymqu4Hs=:v1:6WoQ9pDN4N2PuSXe:V+75SPDsSipFY4GDpGUYPFOSd1tLuQ==

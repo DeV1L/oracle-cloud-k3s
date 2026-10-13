@@ -1,0 +1,34 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+
+# Python
+**/__pycache__
+pulumi/venv/
+pulumi/.venv/
+*.pyc
+
+# Pulumi
+.Pulumi/
+*.env.json
+
+# Credentials and generated access files (never commit)
+.env
+.oci/
+*.pem
+*.key
+kubeconfig*
+*.kubeconfig
+secrets/
+local/

@@ -1,0 +1,78 @@
+#cloud-config
+# k3s server node. cloud-init runs this file only at the first boot.
+# components/cloud_init.py fills the placeholders.
+write_files:
+  - path: /etc/rancher/k3s/config.yaml
+    permissions: "0600"
+    content: |
+      token: "@{token}"
+      node-ip: "@{node_ip}"
+      tls-san: ["@{node_ip}", "@{api_name}"]
+      disable: @{disable}
+      kubelet-arg: @{kubelet_args}
+      write-kubeconfig-mode: "0644"
+  - path: /usr/local/sbin/k3s-bootstrap.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      # Sets up the node and installs k3s. Safe to run a second time.
+      set -euxo pipefail
+      exec >>/var/log/k3s-bootstrap.log 2>&1
+      echo "k3s bootstrap start: $(date -Is)"
+
+      # Swap: the node has 1 GB of RAM.
+      if [ ! -f /swapfile ]; then
+        fallocate -l @{swap_gb}G /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+      fi
+      swapon --show=NAME --noheadings | grep -qx /swapfile || swapon /swapfile
+      grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+      # The Ubuntu image rejects all inbound and forwarded traffic except SSH.
+      # Insert the accept rules before the reject rules, then save them.
+      accept() { iptables -C "$@" -j ACCEPT 2>/dev/null || iptables -I "$@" -j ACCEPT; }
+      accept INPUT -s @{vcn_cidr}
+      accept INPUT -s @{cluster_cidr}
+      accept FORWARD -s @{cluster_cidr}
+      accept FORWARD -d @{cluster_cidr}
+      for port in 80 443 6443; do
+        accept INPUT -p tcp --dport "$port"
+      done
+      netfilter-persistent save
+
+      # The public IP is not on the network interface: OCI translates it in
+      # the internet gateway. Pulumi attaches it shortly after the instance
+      # starts, so ask an outside service and retry until it answers.
+      public_ip=""
+      for attempt in $(seq 60); do
+        for url in https://ifconfig.me https://api.ipify.org; do
+          public_ip="$(curl -4 -sf --max-time 5 "$url" || true)"
+          [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break 2
+        done
+        sleep 10
+      done
+      [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "No public IP found"; exit 1; }
+
+      # Put the public IP into the server certificate, so that kubectl can
+      # connect to it directly. "tls-san+" appends to the list in config.yaml.
+      mkdir -p /etc/rancher/k3s/config.yaml.d
+      echo "tls-san+: [\"$public_ip\"]" > /etc/rancher/k3s/config.yaml.d/public-ip.yaml
+
+      # Install k3s. The settings are in /etc/rancher/k3s/.
+      if ! systemctl is-active --quiet k3s; then
+        for attempt in 1 2 3 4 5; do
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="@{k3s_version}" sh -s - server && break
+          sleep 30
+        done
+      fi
+      systemctl is-active k3s
+
+      # A kubeconfig for the owner: the public IP, and the API name instead of
+      # "default" for the cluster, the context and the user. Copy it with scp.
+      sed -e "s/127.0.0.1/$public_ip/" -e "s/: default$/: @{api_name}/" /etc/rancher/k3s/k3s.yaml > /home/ubuntu/kubeconfig.yaml
+      chown ubuntu:ubuntu /home/ubuntu/kubeconfig.yaml
+      chmod 600 /home/ubuntu/kubeconfig.yaml
+      echo "k3s bootstrap done: $(date -Is)"
+runcmd:
+  - [/usr/local/sbin/k3s-bootstrap.sh]
