@@ -1,0 +1,110 @@
+# Architecture
+
+This document shows the parts of the project and how they connect. The diagrams use the default values of the stack configuration.
+
+## Infrastructure in OCI
+
+All resources are in the root compartment of the tenancy, in the home region. The nodes are in availability domain AD-1.
+
+```mermaid
+---
+config:
+  layout: dagre
+---
+flowchart TB
+    clients["Internet clients"]
+
+    subgraph oci["OCI tenancy: root compartment, home region"]
+        subgraph vcn["VCN k3s-vcn 10.0.0.0/16"]
+            igw["Internet gateway<br/>k3s-igw"]
+            rt["Route table<br/>k3s-rt<br/>0.0.0.0/0 to the internet gateway"]
+            sl["Security list<br/>k3s-sl"]
+            subgraph subnet["Public subnet k3s-subnet 10.0.1.0/24"]
+                server["Server node<br/>k3s-server<br/>10.0.1.10<br/>"]
+                agent["Agent node<br/>k3s-agent-1<br/>10.0.1.11<br/>"]
+            end
+        end
+        rip["Reserved public IP<br/>k3s-server-ip"]
+        eip["Ephemeral public IP<br/>k3s-agent-1-ip"]
+        subgraph vault["Vault k3s-vault, type DEFAULT"]
+            tokensecret["Secret<br/>k3s-join-token"]
+            kcsecret["Secret<br/>k3s-kubeconfig"]
+        end
+    end
+
+    clients -- "HTTP 80, HTTPS 443" --> rip
+    clients -- "HTTP 80, HTTPS 443" --> eip
+    rip --- server
+    eip --- agent
+    agent -- "join: 10.0.1.10:6443<br/>with the join token" --> server
+    subnet -.- rt
+    subnet -.- sl
+    rt -- "outbound traffic" --> igw
+    igw ~~~ tokensecret & kcsecret
+```
+
+| Part | Why it is like this |
+|------|---------------------|
+| Reserved public IP on the server node | The API address stays the same after a replacement of the server node. The tenancy has 1 free reserved public IP. |
+| Ephemeral public IP on the agent node | The agent node needs it for internet access. A NAT gateway is not free. |
+| Fixed private IPs | The agent nodes find the server node at `https://10.0.1.10:6443`. |
+| Security list and host firewall | Both must open a port. The cloud-init opens the VCN, the pod network `10.42.0.0/16`, ports 80 and 443, and port 6443 on the server node in iptables. |
+
+## Pulumi program
+
+`__main__.py` reads the configuration once and creates three components and a random join token.
+
+```mermaid
+flowchart TB
+    yaml["Pulumi.default.yaml"] --> config["config.py<br/>load_config() returns K3sConfig"]
+    config --> main["__main__.py"]
+
+    main --> token["RandomPassword<br/>k3s-token<br/>64 characters"]
+    main --> network["NetworkComponent<br/>network.py"]
+    main --> vaultc["VaultComponent<br/>vault.py"]
+    main --> cluster["K3sClusterComponent<br/>cluster.py"]
+
+    network --> netres["VCN, internet gateway,<br/>route table, security list, subnet"]
+    vaultc --> vaultres["Vault, key,<br/>secrets join-token and kubeconfig"]
+    cluster --> clusterres["Instances server and agent-1,<br/>public IPs"]
+
+    token -- "join token" --> vaultc
+    token -- "join token" --> cluster
+    network -- "subnet ID" --> cluster
+
+    cluster --> cloudinit["cloud_init.py"]
+    templates["templates/server.yaml<br/>templates/agent.yaml"] --> cloudinit
+    cloudinit -- "user_data" --> clusterres
+```
+
+| Component | Type token | Stack outputs |
+|-----------|------------|---------------|
+| `NetworkComponent` | `oracle-cloud-k3s:network:NetworkComponent` | `vcn_id`, `subnet_id` |
+| `VaultComponent` | `oracle-cloud-k3s:vault:VaultComponent` | `vault_ocid`, `join_token_secret_ocid`, `kubeconfig_secret_ocid` |
+| `K3sClusterComponent` | `oracle-cloud-k3s:cluster:K3sClusterComponent` | `server_public_ip`, `agent_public_ips`, `api_server_url`, `ssh_user` |
+
+## First boot
+
+cloud-init runs the bootstrap script `/usr/local/sbin/k3s-bootstrap.sh` once, at the first boot. The script is safe to run a second time.
+
+```mermaid
+sequenceDiagram
+    actor Owner
+    participant Pulumi
+    participant Server as Server node
+    participant Agent as Agent node
+    participant Vault
+
+    Owner->>Pulumi: pulumi up
+    Pulumi->>Vault: create the secrets join-token and kubeconfig (placeholder)
+    Pulumi->>Server: create the instance with user_data
+    Pulumi->>Agent: create the instance with user_data
+    Note over Server,Agent: cloud-init: swap file, iptables rules
+    Server->>Server: find the public IP (ifconfig.me or api.ipify.org)
+    Server->>Server: install k3s server, add the public IP to the certificate
+    Server->>Server: write /home/ubuntu/kubeconfig.yaml
+    Agent->>Server: install k3s agent, join at 10.0.1.10:6443 with the join token
+    Owner->>Server: scp kubeconfig.yaml
+    Owner->>Vault: store the kubeconfig as a new secret version
+    Owner->>Vault: on another computer, read the kubeconfig
+```
