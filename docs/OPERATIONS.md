@@ -51,7 +51,7 @@ ssh ubuntu@"$(pulumi stack output server_public_ip)"
 pulumi stack output server_public_ip
 
 # Agent
-pulumi stack output agent_public_ips
+pulumi stack output agent_public_ip
 ```
 
 ## Check the capacity
@@ -110,7 +110,7 @@ kubectl --kubeconfig ~/.kube/oci-k3s.yaml delete node <agent node name>
 
 After a replacement of the server node, do these steps too:
 
-1. Replace every agent node with the steps above. A new server node starts a new, empty cluster.
+1. Replace the agent node with the steps above. A new server node starts a new, empty cluster.
 2. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
 
 ## Upgrade k3s
@@ -129,7 +129,7 @@ pulumi config set k3s:k3s_version <new version>
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='<new version>' sh -s - server
 ```
 
-3. Connect to each agent node with SSH. Run the installer with the new version:
+3. Connect to the agent node with SSH. Run the installer with the new version:
 
 ```bash
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='<new version>' K3S_URL='https://10.0.1.10:6443' sh -s - agent

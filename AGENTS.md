@@ -37,7 +37,7 @@ Commands, from the repository root:
 Verified in the owner's tenancy (home region `eu-frankfurt-1`) in October 2026.
 
 - Always Free limits that matter here: 2 micro instances, only in availability domain AD-1 of this tenancy; 1 reserved public IP; 1 vault of type `DEFAULT`; 2 VCNs; 200 GB block storage.
-- The server node uses the reserved public IP. Agent nodes use an ephemeral public IP. They need it for internet access, because a NAT gateway is not free.
+- The server node uses the reserved public IP. The agent node uses an ephemeral public IP. It needs it for internet access, because a NAT gateway is not free.
 - A deleted vault waits 7 to 30 days for its deletion and can still count against the limit of 1. To rebuild the cluster, keep the vault ("Rebuild the cluster and keep the vault" in `docs/OPERATIONS.md`).
 - OCI rejects changes to `user_data` and `ssh_authorized_keys`, and cloud-init runs only at the first boot. Therefore the instances are protected and ignore changes to the image and the metadata. A cloud-init change applies only to new nodes.
 - To test a cloud-init change without a new instance, copy the new bootstrap script to the live node and run it there. The script is safe to run a second time.

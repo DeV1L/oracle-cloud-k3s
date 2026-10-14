@@ -223,7 +223,7 @@ The other keys are optional:
 | `k3s:vcn_cidr` | `10.0.0.0/16` | VCN address range |
 | `k3s:subnet_cidr` | `10.0.1.0/24` | Subnet address range, inside the VCN range |
 | `k3s:server_private_ip` | `10.0.1.10` | Private IP of the server node |
-| `k3s:agent_private_ips` | `[10.0.1.11]` | One agent node per entry. The free limit is two nodes in total. |
+| `k3s:agent_private_ip` | `10.0.1.11` | Private IP of the agent node |
 | `k3s:admin_cidr` | `0.0.0.0/0` | Source address range for SSH (port 22) and the Kubernetes API (port 6443) |
 | `k3s:api_name` | `oci-k3s` | An additional name in the server certificate, for example a DNS name |
 | `k3s:disable` | `[traefik, metrics-server]` | k3s components that are not installed |

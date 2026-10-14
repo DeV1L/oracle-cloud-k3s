@@ -8,7 +8,7 @@ This document describes the addresses, the routing, the DNS and the firewalls of
 |---------|-------|--------|
 | VCN `k3s-vcn` | `10.0.0.0/16` | `vcn_cidr` |
 | Subnet `k3s-subnet` | `10.0.1.0/24` | `subnet_cidr` |
-| Server node, agent node | `10.0.1.10`, `10.0.1.11` | `server_private_ip`, `agent_private_ips` |
+| Server node, agent node | `10.0.1.10`, `10.0.1.11` | `server_private_ip`, `agent_private_ip` |
 | Pod network | `10.42.0.0/16`, one `/24` for each node | k3s default |
 | Service network | `10.43.0.0/16`. The cluster DNS is `10.43.0.10`. | k3s default |
 
