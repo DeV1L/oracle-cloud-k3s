@@ -36,6 +36,11 @@ class VaultComponent(pulumi.ComponentResource):
     ):
         super().__init__("oracle-cloud-k3s:vault:VaultComponent", name, None, opts)
 
+        # The parent groups the resources under this component in the state and
+        # in the preview. It is part of the URN of each child: the ID with which
+        # Pulumi matches a resource in the code to the resource in the state.
+        # The children also get options such as `provider` and `protect` from
+        # `opts` of the component.
         child = pulumi.ResourceOptions(parent=self)
         compartment_id = config.compartment_ocid
 

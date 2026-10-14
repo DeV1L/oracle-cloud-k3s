@@ -48,7 +48,8 @@ flowchart TB
 | Reserved public IP on the server node | The API address stays the same after a replacement of the server node. The tenancy has 1 free reserved public IP. |
 | Ephemeral public IP on the agent node | The agent node needs it for internet access. A NAT gateway is not free. |
 | Fixed private IPs | The agent nodes find the server node at `https://10.0.1.10:6443`. |
-| Security list and host firewall | Both must open a port. The cloud-init opens the VCN, the pod network `10.42.0.0/16`, ports 80 and 443, and port 6443 on the server node in iptables. |
+
+[Network](NETWORK.md) describes the addresses, the routing, the DNS and the firewalls.
 
 ## Pulumi program
 
