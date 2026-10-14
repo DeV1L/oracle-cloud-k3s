@@ -47,7 +47,7 @@ Pulumi has two kinds of resources:
 Each component is a subclass of `pulumi.ComponentResource`. It does these steps:
 
 1. It registers itself in the state with its type token, for example `oracle-cloud-k3s:cluster:K3sClusterComponent`.
-2. It creates its custom resources with `parent=self`. The parent groups them under the component in the state and in the preview.
+2. It creates its custom resources with `parent=self`. The parent groups them under the component in the state and in the preview. The parent is also part of the URN of each child: the ID with which Pulumi matches a resource in the code to the resource in the state. The children get options such as `provider` and `protect` from `opts` of the component.
 3. It ends with `register_outputs(...)`. This marks the component as complete.
 
 A component keeps one area of the infrastructure in one module. `__main__.py` connects the components through their outputs, for example the subnet ID.
