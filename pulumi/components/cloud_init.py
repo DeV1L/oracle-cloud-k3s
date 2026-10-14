@@ -10,9 +10,6 @@ from typing import List
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
-# k3s default pod network. The host firewall must accept and forward it.
-DEFAULT_CLUSTER_CIDR = "10.42.0.0/16"
-
 # 1 GB nodes: keep memory for the OS and k3s, and evict pods before the
 # kernel OOM killer acts.
 DEFAULT_KUBELET_ARGS = [
@@ -44,7 +41,6 @@ class NodeParams:
     k3s_version: str
     node_ip: str
     server_url: str
-    vcn_cidr: str
     api_name: str
     disable: List[str]
     swap_gb: int
@@ -59,8 +55,6 @@ def _render(template_name: str, params: NodeParams) -> str:
         k3s_version=params.k3s_version,
         node_ip=params.node_ip,
         server_url=params.server_url,
-        vcn_cidr=params.vcn_cidr,
-        cluster_cidr=DEFAULT_CLUSTER_CIDR,
         api_name=params.api_name,
         disable=json.dumps(params.disable),
         swap_gb=params.swap_gb,

@@ -31,27 +31,24 @@ The VCN resolver knows the node names, for example `k3s-agent-1.nodes.k3s.oracle
 
 ## Firewall
 
-Two firewalls filter the traffic. A packet must pass both:
+The security list `k3s-sl` on the subnet is the only firewall. It is stateful: replies to allowed traffic pass.
 
-1. The security list `k3s-sl` on the subnet, in OCI.
-2. iptables on each node. The Ubuntu image rejects all inbound and forwarded traffic, except SSH, ICMP and replies. The cloud-init inserts accept rules before the reject rules.
+| Traffic | Allowed from |
+|---------|--------------|
+| SSH, TCP 22 | `admin_cidr` |
+| Kubernetes API, TCP 6443 | `admin_cidr` |
+| HTTP and HTTPS, TCP 80 and 443 | Anywhere |
+| All traffic inside the VCN: join, kubelet, VXLAN | `10.0.0.0/16` |
+| ICMP "fragmentation needed" (type 3, code 4) | Anywhere |
 
-Both firewalls are stateful: replies to allowed traffic pass.
-
-| Traffic | Security list | iptables on the node |
-|---------|---------------|----------------------|
-| SSH, TCP 22 | From `admin_cidr` | Rule of the Ubuntu image |
-| Kubernetes API, TCP 6443 | From `admin_cidr` | Accept on the server node |
-| HTTP and HTTPS, TCP 80 and 443 | From anywhere | Accept on all nodes |
-| All traffic inside the VCN: join, kubelet, VXLAN | From `10.0.0.0/16` | Accept from `10.0.0.0/16` |
-| Pod traffic | Not applicable: VXLAN packets use the node IPs | Accept from `10.42.0.0/16`, forward from and to `10.42.0.0/16` |
-| ICMP "fragmentation needed" (type 3, code 4) | From anywhere | Rule of the Ubuntu image |
-| Outbound traffic | All allowed | All allowed |
+All outbound traffic is allowed.
 
 The default of `admin_cidr` is `0.0.0.0/0`. Then only the SSH key and the client certificate in the kubeconfig protect the nodes.
 
-k3s adds its own iptables chains (`KUBE-*`) for services and network policies. The cloud-init rules do not change them.
+The Ubuntu image also has an iptables firewall. The cloud-init turns it off, so ports open only in the security list.
+
+k3s adds its own iptables chains (`KUBE-*`, `FLANNEL-*`) for services, network policies and the pod network.
 
 ## Workload traffic
 
-traefik is disabled, so the cluster has no ingress controller after the first boot. A `LoadBalancer` service gets no OCI load balancer. The k3s service load balancer (servicelb) runs a pod on each node. This pod opens the service port on the node, so the public IP of each node accepts the traffic. Only ports 80 and 443 are open in both firewalls.
+traefik is disabled, so the cluster has no ingress controller after the first boot. A `LoadBalancer` service gets no OCI load balancer. The k3s service load balancer (servicelb) runs a pod on each node. This pod opens the service port on the node, so the public IP of each node accepts the traffic. The security list opens only ports 80 and 443 to the internet.

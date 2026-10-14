@@ -257,28 +257,17 @@ The expected output is `pong`. When the command fails, read "Traffic is blocked"
 
 ### Traffic is blocked
 
-The Ubuntu image on OCI has a host firewall (iptables). It rejects all inbound traffic except SSH. The OCI security list alone does not open a port. The first boot opens these ports on the host: all traffic from the VCN and from the pod network `10.42.0.0/16`, ports 80 and 443, and port 6443 on the server node.
+The OCI security list is the only firewall. The cloud-init removes the reject rules of the host firewall (iptables) in the Ubuntu image.
 
-1. Connect to the node with SSH.
-2. Show the rules:
-
-```bash
-sudo iptables -L INPUT -n --line-numbers
-```
-
-3. To open another port, insert a rule before the `REJECT` rule. Replace `<port>`:
+1. Add the port to the security list in `components/network.py`.
+2. Run `pulumi up`.
+3. When the port is still blocked, connect to the node with SSH. Show the host firewall rules:
 
 ```bash
-sudo iptables -I INPUT -p tcp --dport <port> -j ACCEPT
+sudo iptables -S INPUT
 ```
 
-4. Save the rules, so that they stay after a restart:
-
-```bash
-sudo netfilter-persistent save
-```
-
-5. Add the same port to the security list in `components/network.py`. Run `pulumi up`.
+The output must not contain a `REJECT` rule with `icmp-host-prohibited`.
 
 ### k3s is not ready
 

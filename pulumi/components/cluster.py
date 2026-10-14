@@ -59,7 +59,6 @@ class K3sClusterComponent(pulumi.ComponentResource):
                 k3s_version=config.k3s_version,
                 node_ip=node_ip,
                 server_url=server_url,
-                vcn_cidr=config.vcn_cidr,
                 api_name=config.api_name,
                 disable=config.disable,
                 swap_gb=config.swap_gb,

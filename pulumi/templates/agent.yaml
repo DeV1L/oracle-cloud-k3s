@@ -27,16 +27,13 @@ write_files:
       grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
       # The Ubuntu image rejects all inbound and forwarded traffic except SSH.
-      # Insert the accept rules before the reject rules, then save them.
-      accept() { iptables -C "$@" -j ACCEPT 2>/dev/null || iptables -I "$@" -j ACCEPT; }
-      accept INPUT -s @{vcn_cidr}
-      accept INPUT -s @{cluster_cidr}
-      accept FORWARD -s @{cluster_cidr}
-      accept FORWARD -d @{cluster_cidr}
-      for port in 80 443; do
-        accept INPUT -p tcp --dport "$port"
+      # The OCI security list is the firewall of the cluster, so remove the
+      # two reject rules, also from the saved rules. The rules of the image
+      # for the OCI services (OUTPUT to 169.254.0.0/16) stay.
+      sed -i '/-j REJECT --reject-with icmp-host-prohibited/d' /etc/iptables/rules.v4
+      for chain in INPUT FORWARD; do
+        iptables -D "$chain" -j REJECT --reject-with icmp-host-prohibited 2>/dev/null || true
       done
-      netfilter-persistent save
 
       # Install the k3s agent. It retries until the server node answers.
       # The token and the kubelet settings are in /etc/rancher/k3s/config.yaml.

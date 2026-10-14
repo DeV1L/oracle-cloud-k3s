@@ -42,7 +42,7 @@ Verified in the owner's tenancy (home region `eu-frankfurt-1`) in October 2026.
 - OCI rejects changes to `user_data` and `ssh_authorized_keys`, and cloud-init runs only at the first boot. Therefore the instances are protected and ignore changes to the image and the metadata. A cloud-init change applies only to new nodes.
 - To test a cloud-init change without a new instance, copy the new bootstrap script to the live node and run it there. The script is safe to run a second time.
 - A replacement deletes the old instance first (`delete_before_replace`): the fixed private IP and the micro quota allow no second instance. A replaced agent node joins only after `kubectl delete node <name>`.
-- The Ubuntu image rejects inbound and forwarded traffic with iptables. The cloud-init opens the VCN, the pod network `10.42.0.0/16`, ports 80 and 443, and port 6443 on the server node.
+- The security list is the only firewall. The Ubuntu image rejects inbound and forwarded traffic with iptables. The cloud-init removes these two reject rules.
 - The server node finds its public IP at the first boot through `ifconfig.me` or `api.ipify.org`. It puts the IP into the k3s certificate and writes `/home/ubuntu/kubeconfig.yaml`.
 - `Pulumi.yaml` sets `refresh: always`, so every preview sees resources that were deleted outside Pulumi.
 - The Pulumi CLI must be 3.268 or newer. Version 3.256 cannot log in to the state bucket (`BadDigest`).

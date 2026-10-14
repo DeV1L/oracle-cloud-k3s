@@ -114,7 +114,7 @@ sequenceDiagram
     Pulumi->>Vault: create the secrets join-token and kubeconfig (placeholder)
     Pulumi->>Server: create the instance with user_data
     Pulumi->>Agent: create the instance with user_data
-    Note over Server,Agent: cloud-init: swap file, iptables rules
+    Note over Server,Agent: cloud-init: swap, iptables
     Server->>Server: find the public IP (ifconfig.me or api.ipify.org)
     Server->>Server: install k3s server, add the public IP to the certificate
     Server->>Server: write /home/ubuntu/kubeconfig.yaml

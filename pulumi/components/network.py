@@ -1,8 +1,8 @@
 """
 Network for the cluster: one VCN with one public regional subnet.
 
-The security list is stateful. The nodes also run a host firewall (iptables
-in the Ubuntu image); the cloud-init opens the same ports there.
+The security list is stateful and is the only firewall. The cloud-init
+removes the reject rules of the host firewall (iptables) in the Ubuntu image.
 """
 
 import re
