@@ -108,10 +108,47 @@ After a replacement of an agent node, delete its old node object. The new node h
 kubectl --kubeconfig ~/.kube/oci-k3s.yaml delete node <agent node name>
 ```
 
-After a replacement of the server node, do these steps too:
+A new server node starts a new, empty cluster. To replace the server node, replace both nodes.
 
-1. Replace the agent node with the steps above. A new server node starts a new, empty cluster.
-2. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
+## Replace both nodes
+
+This makes a new, empty cluster with the same network, vault, join token and server public IP. All workloads and their data are lost.
+
+CAUTION: both old instances are deleted first. When OCI has no capacity, the nodes are gone until capacity comes back. This can take days.
+
+1. Check the capacity. Continue only with `AVAILABLE`:
+
+```bash
+../scripts/check-capacity.sh
+```
+
+2. Remove the protection from the instances. Only the instances are protected:
+
+```bash
+pulumi state unprotect --all --yes
+```
+
+3. Show the resource names (URNs) of the instances:
+
+```bash
+pulumi stack --show-urns | grep 'Instance::'
+```
+
+4. Replace both instances. Use the URNs from step 3. Read the preview. Only the instances and their public IPs may change:
+
+```bash
+pulumi up --replace '<server instance URN>' --replace '<agent instance URN>'
+```
+
+5. Remove the old host key of the server node from the local SSH client. The agent node has a new public IP:
+
+```bash
+ssh-keygen -R "$(pulumi stack output server_public_ip)"
+```
+
+6. Wait about 5 minutes for the first boot. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
+
+The agent node joins the new cluster on its own.
 
 ## Upgrade k3s
 
