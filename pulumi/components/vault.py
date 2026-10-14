@@ -76,7 +76,7 @@ class VaultComponent(pulumi.ComponentResource):
             description="k3s join token for the cluster nodes",
             secret_content=oci.vault.SecretSecretContentArgs(
                 content_type="BASE64",
-                content=pulumi.Output.secret(join_token).apply(_b64),
+                content=join_token.apply(_b64),
             ),
             freeform_tags=config.tags,
             opts=child,
