@@ -3,9 +3,8 @@ k3s cluster: one server node and the agent nodes, each with a public IP.
 
 CAUTION: OCI rejects a change to `user_data` or `ssh_authorized_keys` on a live
 instance, so Pulumi would replace the instance. Free micro capacity is not
-guaranteed, and a deleted instance can take days to get back. The instances
-are therefore protected and ignore changes to the image and the metadata.
-A node replacement is a deliberate step (`pulumi up --replace`).
+guaranteed. The instances are protected and ignore changes to the image and the 
+metadata. A node replacement is a manual step (`pulumi up --replace`).
 """
 
 import base64
