@@ -50,5 +50,6 @@ The Pulumi state is in a private OCI Object Storage bucket with versioning. Pulu
 - [Network](docs/NETWORK.md)
 - [Vault](docs/VAULT.md)
 - [Pulumi program](docs/PULUMI.md)
+- [k3s and cloud-init](docs/K3S.md)
 - [Setup guide](docs/SETUP.md)
 - [Operations guide](docs/OPERATIONS.md)

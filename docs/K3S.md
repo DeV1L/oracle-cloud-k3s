@@ -1,0 +1,51 @@
+# k3s and cloud-init
+
+k3s is a small Kubernetes distribution in one binary. The server node runs the control plane and workloads. The agent node runs workloads only.
+
+## Cloud-init
+
+Each instance gets a cloud-init file from `pulumi/templates/` as `user_data`. cloud-init runs it once, at the first boot. The file does two things:
+
+1. It writes the k3s configuration `/etc/rancher/k3s/config.yaml`.
+2. It writes the bootstrap script `/usr/local/sbin/k3s-bootstrap.sh` and runs it.
+
+The bootstrap script does these steps:
+
+1. It makes a swap file (`swap_gb`, 2 GB by default).
+2. It removes the reject rules of the iptables firewall in the Ubuntu image.
+3. Server node only: it finds the public IP and adds it to the API certificate.
+4. It installs the pinned k3s version from `get.k3s.io`. It tries 5 times.
+5. Server node only: it writes `/home/ubuntu/kubeconfig.yaml` with the public IP.
+
+The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a second time.
+
+## k3s configuration
+
+| Key | Node | Value |
+|-----|------|-------|
+| `token` | Both | The join token |
+| `node-ip` | Both | The private IP of the node |
+| `kubelet-arg` | Both | Memory reserved for the OS and k3s, and the eviction limit (`KUBELET_ARGS`) |
+| `tls-san` | Server | Additional names in the API certificate: the private IP and `api_name`. The bootstrap script adds the public IP. |
+| `disable` | Server | k3s components that are not installed. The default is `traefik`. |
+| `write-kubeconfig-mode` | Server | `0644`: the kubeconfig `/etc/rancher/k3s/k3s.yaml` is readable for all users on the node |
+
+The agent node joins the server node at `https://10.0.1.10:6443` (`K3S_URL`).
+
+The k3s components that stay on: CoreDNS, the local-path storage provisioner, the service load balancer (servicelb), metrics-server, flannel and the network policy controller.
+
+## Change the configuration of a live node
+
+A change in a template applies only to a new node. To change a live node:
+
+1. Connect to the node with SSH.
+2. Edit `/etc/rancher/k3s/config.yaml`.
+3. Restart k3s on the server node:
+
+```bash
+sudo systemctl restart k3s
+```
+
+On the agent node, restart `k3s-agent` instead.
+
+4. Make the same change in the template, so that a new node gets it.
