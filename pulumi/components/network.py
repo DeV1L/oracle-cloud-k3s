@@ -6,6 +6,7 @@ in the Ubuntu image); the cloud-init opens the same ports there.
 """
 
 import re
+from typing import Optional
 
 import pulumi
 import pulumi_oci as oci
@@ -22,7 +23,7 @@ class NetworkComponent(pulumi.ComponentResource):
     PROTOCOL_ICMP = "1"
     PROTOCOL_TCP = "6"
 
-    def __init__(self, name: str, config: ProjectConfig, opts: pulumi.ResourceOptions = None):
+    def __init__(self, name: str, config: ProjectConfig, opts: Optional[pulumi.ResourceOptions] = None):
         super().__init__("oracle-cloud-k3s:network:NetworkComponent", name, None, opts)
 
         child = pulumi.ResourceOptions(parent=self)

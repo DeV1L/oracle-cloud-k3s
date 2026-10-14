@@ -9,7 +9,7 @@ A node replacement is a deliberate step (`pulumi up --replace`).
 """
 
 import base64
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pulumi
 import pulumi_oci as oci
@@ -42,7 +42,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
         config: ProjectConfig,
         subnet_id: pulumi.Output[str],
         join_token: pulumi.Output[str],
-        opts: pulumi.ResourceOptions = None,
+        opts: Optional[pulumi.ResourceOptions] = None,
     ):
         super().__init__("oracle-cloud-k3s:cluster:K3sClusterComponent", name, None, opts)
 

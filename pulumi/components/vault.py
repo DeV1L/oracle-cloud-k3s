@@ -3,6 +3,7 @@ OCI Vault for the cluster secrets: the k3s join token and the kubeconfig.
 """
 
 import base64
+from typing import Optional
 
 import pulumi
 import pulumi_oci as oci
@@ -31,7 +32,7 @@ class VaultComponent(pulumi.ComponentResource):
         name: str,
         config: ProjectConfig,
         join_token: pulumi.Output[str],
-        opts: pulumi.ResourceOptions = None,
+        opts: Optional[pulumi.ResourceOptions] = None,
     ):
         super().__init__("oracle-cloud-k3s:vault:VaultComponent", name, None, opts)
 
