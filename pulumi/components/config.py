@@ -23,8 +23,32 @@ class ProjectConfig:
     DEFAULT_AGENT_PRIVATE_IP = "10.0.1.11"
     DEFAULT_ADMIN_CIDR = "0.0.0.0/0"
     DEFAULT_API_NAME = "oci-k3s"
-    DEFAULT_DISABLE = ["traefik", "metrics-server"]
+    DEFAULT_DISABLE = ["traefik"]
     DEFAULT_SWAP_GB = 2
+
+    # Fixed values, not stack configuration keys. A change can replace an
+    # instance or leave the Always Free limits.
+    SHAPE = "VM.Standard.E2.1.Micro"
+    IMAGE_OS = "Canonical Ubuntu"
+    IMAGE_OS_VERSION = "24.04"
+    SSH_USER = "ubuntu"
+    API_PORT = 6443
+    # Optional Oracle Cloud Agent plugins use 100 MB of RAM or more.
+    # Compute Instance Monitoring stays on, so Oracle sees the node utilization.
+    DISABLED_AGENT_PLUGINS = [
+        "Management Agent",
+        "Cloud Guard Workload Protection",
+        "Vulnerability Scanning",
+        "OS Management Hub Agent",
+        "Custom Logs Monitoring",
+    ]
+    # 1 GB nodes: keep memory for the OS and k3s, and evict pods before the
+    # kernel OOM killer acts.
+    KUBELET_ARGS = [
+        "system-reserved=memory=128Mi",
+        "kube-reserved=memory=128Mi",
+        "eviction-hard=memory.available<100Mi",
+    ]
 
     region: str
     compartment_ocid: str
@@ -51,6 +75,11 @@ class ProjectConfig:
             "project": "oracle-cloud-k3s",
             "stack": self.stack,
         }
+
+    @property
+    def server_url(self) -> str:
+        """The URL at which the agent node joins the server node."""
+        return f"https://{self.server_private_ip}:{self.API_PORT}"
 
     def name(self, suffix: str) -> str:
         """Display name with the configured prefix, for example `k3s-vcn`."""

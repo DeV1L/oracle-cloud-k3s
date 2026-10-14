@@ -20,21 +20,6 @@ from .config import ProjectConfig
 class K3sClusterComponent(pulumi.ComponentResource):
     """Server node, agent node and their public IPs."""
 
-    SHAPE = "VM.Standard.E2.1.Micro"
-    DEFAULT_IMAGE_OS = "Canonical Ubuntu"
-    DEFAULT_IMAGE_OS_VERSION = "24.04"
-    SSH_USER = "ubuntu"
-    API_PORT = 6443
-    # Optional Oracle Cloud Agent plugins use 100 MB of RAM or more.
-    # Compute Instance Monitoring stays on, so Oracle sees the node utilization.
-    DISABLED_AGENT_PLUGINS = [
-        "Management Agent",
-        "Cloud Guard Workload Protection",
-        "Vulnerability Scanning",
-        "OS Management Hub Agent",
-        "Custom Logs Monitoring",
-    ]
-
     def __init__(
         self,
         name: str,
@@ -50,8 +35,6 @@ class K3sClusterComponent(pulumi.ComponentResource):
         self._subnet_id = subnet_id
         self._image_id = config.image_ocid or self._latest_image_id()
 
-        server_url = f"https://{config.server_private_ip}:{self.API_PORT}"
-
         def cloud_init(render: Callable[[NodeParams], str], node_ip: str) -> pulumi.Output[str]:
             """The cloud-init of one node. All nodes get the same join token."""
 
@@ -61,10 +44,11 @@ class K3sClusterComponent(pulumi.ComponentResource):
                         token=token,
                         k3s_version=config.k3s_version,
                         node_ip=node_ip,
-                        server_url=server_url,
+                        server_url=config.server_url,
                         api_name=config.api_name,
                         disable=config.disable,
                         swap_gb=config.swap_gb,
+                        kubelet_args=config.KUBELET_ARGS,
                     )
                 )
 
@@ -111,7 +95,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
 
         server_ip = self.server_public_ip.ip_address
         agent_ip = self.agent_public_ip.ip_address
-        api_server_url = server_ip.apply(lambda ip: f"https://{ip}:{self.API_PORT}")
+        api_server_url = server_ip.apply(lambda ip: f"https://{ip}:{config.API_PORT}")
 
         self.register_outputs(
             {
@@ -123,14 +107,14 @@ class K3sClusterComponent(pulumi.ComponentResource):
         pulumi.export("server_public_ip", server_ip)
         pulumi.export("agent_public_ip", agent_ip)
         pulumi.export("api_server_url", api_server_url)
-        pulumi.export("ssh_user", self.SSH_USER)
+        pulumi.export("ssh_user", config.SSH_USER)
 
     def _latest_image_id(self) -> pulumi.Output[str]:
         images = oci.core.get_images_output(
             compartment_id=self._config.compartment_ocid,
-            operating_system=self.DEFAULT_IMAGE_OS,
-            operating_system_version=self.DEFAULT_IMAGE_OS_VERSION,
-            shape=self.SHAPE,
+            operating_system=self._config.IMAGE_OS,
+            operating_system_version=self._config.IMAGE_OS_VERSION,
+            shape=self._config.SHAPE,
             sort_by="TIMECREATED",
             sort_order="DESC",
         )
@@ -145,7 +129,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
             f"{self._name}-{role}",
             compartment_id=config.compartment_ocid,
             availability_domain=config.availability_domain,
-            shape=self.SHAPE,
+            shape=config.SHAPE,
             display_name=display_name,
             create_vnic_details=oci.core.InstanceCreateVnicDetailsArgs(
                 subnet_id=self._subnet_id,
@@ -167,7 +151,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
                 is_monitoring_disabled=False,
                 plugins_configs=[
                     oci.core.InstanceAgentConfigPluginsConfigArgs(name=plugin, desired_state="DISABLED")
-                    for plugin in self.DISABLED_AGENT_PLUGINS
+                    for plugin in config.DISABLED_AGENT_PLUGINS
                 ],
             ),
             preserve_boot_volume=False,

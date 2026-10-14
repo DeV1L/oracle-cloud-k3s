@@ -62,7 +62,7 @@ A value is in one of three places:
 |-------|--------|-----|
 | `Pulumi.default.yaml`, required keys | Region, compartment, availability domain, SSH public keys | These values are different for each project. |
 | `DEFAULT_*` constants in `config.py` | k3s version, CIDRs, private IPs, name prefix, API name, disabled k3s components, swap size | These defaults work for all. A key in `Pulumi.default.yaml` overrides a default. |
-| Constants in the components | Shape, image OS, SSH user, API port, disabled Oracle Cloud Agent plugins | These are not options. A change can replace an instance. |
+| Other constants in `config.py` | Shape, image OS, SSH user, API port, disabled Oracle Cloud Agent plugins, kubelet arguments | These are not stack configuration keys. A change can replace an instance. |
 
 For `disable`, an empty list is a valid value. Only a missing key gets the default.
 

@@ -4,19 +4,11 @@ Renders the first-boot cloud-init files for the server node and the agent node.
 
 import json
 import string
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
-
-# 1 GB nodes: keep memory for the OS and k3s, and evict pods before the
-# kernel OOM killer acts.
-DEFAULT_KUBELET_ARGS = [
-    "system-reserved=memory=128Mi",
-    "kube-reserved=memory=128Mi",
-    "eviction-hard=memory.available<100Mi",
-]
 
 
 class _Template(string.Template):
@@ -35,7 +27,7 @@ class _Template(string.Template):
 
 @dataclass(frozen=True)
 class NodeParams:
-    """Values for one node. The server node does not use `server_url`."""
+    """Values for the node. The server node does not use `server_url`."""
 
     token: str
     k3s_version: str
@@ -44,7 +36,7 @@ class NodeParams:
     api_name: str
     disable: List[str]
     swap_gb: int
-    kubelet_args: List[str] = field(default_factory=lambda: list(DEFAULT_KUBELET_ARGS))
+    kubelet_args: List[str]
 
 
 def _render(template_name: str, params: NodeParams) -> str:
@@ -68,5 +60,5 @@ def render_server(params: NodeParams) -> str:
 
 
 def render_agent(params: NodeParams) -> str:
-    """cloud-init for an agent node."""
+    """cloud-init for the agent node."""
     return _render("agent.yaml", params)

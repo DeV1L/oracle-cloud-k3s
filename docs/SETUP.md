@@ -226,7 +226,7 @@ The other keys are optional:
 | `k3s:agent_private_ip` | `10.0.1.11` | Private IP of the agent node |
 | `k3s:admin_cidr` | `0.0.0.0/0` | Source address range for SSH (port 22) and the Kubernetes API (port 6443) |
 | `k3s:api_name` | `oci-k3s` | An additional name in the server certificate, for example a DNS name |
-| `k3s:disable` | `[traefik, metrics-server]` | k3s components that are not installed |
+| `k3s:disable` | `[traefik]` | k3s components that are not installed |
 | `k3s:image_ocid` | latest Canonical Ubuntu 24.04 | Image for new nodes |
 | `k3s:swap_gb` | `2` | Swap file size per node in GB |
 
