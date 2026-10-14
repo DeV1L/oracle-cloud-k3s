@@ -10,7 +10,7 @@ import re
 import pulumi
 import pulumi_oci as oci
 
-from .config import K3sConfig
+from .config import ProjectConfig
 
 
 class NetworkComponent(pulumi.ComponentResource):
@@ -22,7 +22,7 @@ class NetworkComponent(pulumi.ComponentResource):
     PROTOCOL_ICMP = "1"
     PROTOCOL_TCP = "6"
 
-    def __init__(self, name: str, config: K3sConfig, opts: pulumi.ResourceOptions = None):
+    def __init__(self, name: str, config: ProjectConfig, opts: pulumi.ResourceOptions = None):
         super().__init__("oracle-cloud-k3s:network:NetworkComponent", name, None, opts)
 
         child = pulumi.ResourceOptions(parent=self)

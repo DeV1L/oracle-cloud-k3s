@@ -56,7 +56,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    yaml["Pulumi.default.yaml"] --> config["config.py<br/>load_config() returns K3sConfig"]
+    yaml["Pulumi.default.yaml"] --> config["config.py<br/>load_config() returns ProjectConfig"]
     config --> main["__main__.py"]
 
     main --> token["RandomPassword<br/>k3s-token<br/>64 characters"]
@@ -82,6 +82,20 @@ flowchart TB
 | `NetworkComponent` | `oracle-cloud-k3s:network:NetworkComponent` | `vcn_id`, `subnet_id` |
 | `VaultComponent` | `oracle-cloud-k3s:vault:VaultComponent` | `vault_ocid`, `join_token_secret_ocid`, `kubeconfig_secret_ocid` |
 | `K3sClusterComponent` | `oracle-cloud-k3s:cluster:K3sClusterComponent` | `server_public_ip`, `agent_public_ips`, `api_server_url`, `ssh_user` |
+
+### Configuration
+
+The function `load_config()` in `config.py` reads the stack configuration and returns it as one `ProjectConfig` object. `__main__.py` gives this object to each component. The components do not read the stack configuration.
+
+A value is in one of three places:
+
+| Place | Values | Why |
+|-------|--------|-----|
+| `Pulumi.default.yaml`, required keys | Region, compartment, availability domain, SSH public keys | These values are different for each project. |
+| `DEFAULT_*` constants in `config.py` | k3s version, CIDRs, private IPs, name prefix, API name, disabled k3s components, swap size | These defaults work for all. A key in `Pulumi.default.yaml` overrides a default. |
+| Constants in the components | Shape, image OS, SSH user, API port, disabled Oracle Cloud Agent plugins | These are not options. A change can replace an instance. |
+
+For `agent_private_ips` and `disable`, an empty list is a valid value. Only a missing key gets the default.
 
 ## First boot
 

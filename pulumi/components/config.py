@@ -1,7 +1,7 @@
 """
 Typed stack configuration.
 
-Every component gets its settings from one `K3sConfig` object. Only this
+Every component gets its settings from one `ProjectConfig` object. Only this
 module reads `pulumi.Config`, so the keys and their defaults are in one place.
 """
 
@@ -12,7 +12,7 @@ import pulumi
 
 
 @dataclass(frozen=True)
-class K3sConfig:
+class ProjectConfig:
     """Values of the `k3s` and `oci` configuration namespaces, with defaults applied."""
 
     DEFAULT_K3S_VERSION = "v1.36.5+k3s1"
@@ -57,28 +57,28 @@ class K3sConfig:
         return f"{self.name_prefix}-{suffix}"
 
 
-def load_config() -> K3sConfig:
+def load_config() -> ProjectConfig:
     """Read the stack configuration. Fails with a clear message when a required key is missing."""
     k3s = pulumi.Config("k3s")
     oci = pulumi.Config("oci")
     # An empty list is a valid value: no agent node, or no disabled component.
     agent_private_ips = k3s.get_object("agent_private_ips")
     disable = k3s.get_object("disable")
-    return K3sConfig(
+    return ProjectConfig(
         region=oci.require("region"),
         compartment_ocid=k3s.require("compartment_ocid"),
         availability_domain=k3s.require("availability_domain"),
         ssh_public_keys=k3s.require_object("ssh_public_keys"),
-        k3s_version=k3s.get("k3s_version") or K3sConfig.DEFAULT_K3S_VERSION,
-        name_prefix=k3s.get("name_prefix") or K3sConfig.DEFAULT_NAME_PREFIX,
-        vcn_cidr=k3s.get("vcn_cidr") or K3sConfig.DEFAULT_VCN_CIDR,
-        subnet_cidr=k3s.get("subnet_cidr") or K3sConfig.DEFAULT_SUBNET_CIDR,
-        server_private_ip=k3s.get("server_private_ip") or K3sConfig.DEFAULT_SERVER_PRIVATE_IP,
-        agent_private_ips=K3sConfig.DEFAULT_AGENT_PRIVATE_IPS if agent_private_ips is None else agent_private_ips,
-        admin_cidr=k3s.get("admin_cidr") or K3sConfig.DEFAULT_ADMIN_CIDR,
-        api_name=k3s.get("api_name") or K3sConfig.DEFAULT_API_NAME,
-        disable=K3sConfig.DEFAULT_DISABLE if disable is None else disable,
+        k3s_version=k3s.get("k3s_version") or ProjectConfig.DEFAULT_K3S_VERSION,
+        name_prefix=k3s.get("name_prefix") or ProjectConfig.DEFAULT_NAME_PREFIX,
+        vcn_cidr=k3s.get("vcn_cidr") or ProjectConfig.DEFAULT_VCN_CIDR,
+        subnet_cidr=k3s.get("subnet_cidr") or ProjectConfig.DEFAULT_SUBNET_CIDR,
+        server_private_ip=k3s.get("server_private_ip") or ProjectConfig.DEFAULT_SERVER_PRIVATE_IP,
+        agent_private_ips=ProjectConfig.DEFAULT_AGENT_PRIVATE_IPS if agent_private_ips is None else agent_private_ips,
+        admin_cidr=k3s.get("admin_cidr") or ProjectConfig.DEFAULT_ADMIN_CIDR,
+        api_name=k3s.get("api_name") or ProjectConfig.DEFAULT_API_NAME,
+        disable=ProjectConfig.DEFAULT_DISABLE if disable is None else disable,
         image_ocid=k3s.get("image_ocid"),
-        swap_gb=k3s.get_int("swap_gb") or K3sConfig.DEFAULT_SWAP_GB,
+        swap_gb=k3s.get_int("swap_gb") or ProjectConfig.DEFAULT_SWAP_GB,
         stack=pulumi.get_stack(),
     )

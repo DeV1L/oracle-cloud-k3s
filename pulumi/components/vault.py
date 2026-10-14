@@ -7,7 +7,7 @@ import base64
 import pulumi
 import pulumi_oci as oci
 
-from .config import K3sConfig
+from .config import ProjectConfig
 
 
 def _b64(value: str) -> str:
@@ -29,7 +29,7 @@ class VaultComponent(pulumi.ComponentResource):
     def __init__(
         self,
         name: str,
-        config: K3sConfig,
+        config: ProjectConfig,
         join_token: pulumi.Output[str],
         opts: pulumi.ResourceOptions = None,
     ):

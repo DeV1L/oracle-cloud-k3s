@@ -15,7 +15,7 @@ import pulumi
 import pulumi_oci as oci
 
 from .cloud_init import NodeParams, render_agent, render_server
-from .config import K3sConfig
+from .config import ProjectConfig
 
 
 class K3sClusterComponent(pulumi.ComponentResource):
@@ -39,7 +39,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
     def __init__(
         self,
         name: str,
-        config: K3sConfig,
+        config: ProjectConfig,
         subnet_id: pulumi.Output[str],
         join_token: pulumi.Output[str],
         opts: pulumi.ResourceOptions = None,
