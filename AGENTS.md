@@ -43,7 +43,7 @@ Verified in the owner's tenancy (home region `eu-frankfurt-1`) in October 2026.
 - To test a cloud-init change without a new instance, copy the new bootstrap script to the live node and run it there. The script is safe to run a second time.
 - A replacement deletes the old instance first (`delete_before_replace`): the fixed private IP and the micro quota allow no second instance. A replaced agent node joins only after `kubectl delete node <name>`.
 - The security list is the only firewall. The Ubuntu image rejects inbound and forwarded traffic with iptables. The cloud-init removes these two reject rules.
-- Pulumi creates the reserved public IP before the nodes and passes it to the cloud-init. The server node puts it and the DNS name `k3s:api_name` (in `Pulumi.yaml`, not in the stack file) into the k3s certificate. The kubeconfig `/home/ubuntu/kubeconfig.yaml` uses the DNS name.
+- Pulumi creates the reserved public IP before the nodes and passes it to the cloud-init. The server node puts it and the optional DNS name `k3s:api_name` into the k3s certificate. The kubeconfig `/home/ubuntu/kubeconfig.yaml` uses the DNS name.
 - traefik gets Let's Encrypt certificates (HTTP-01). They are on a volume on the node of the traefik pod, so a replacement of this node requests them again. Let's Encrypt allows 5 identical certificates in 7 days: use the staging server for test rebuilds.
 - The scheduler places pods by memory requests. After a replacement, the system pods can start on the server node, which then swaps. Move them ("The server node is slow after a replacement" in `docs/OPERATIONS.md`).
 - `Pulumi.yaml` sets `refresh: always`, so every preview sees resources that were deleted outside Pulumi.

@@ -3,6 +3,3 @@ runtime: python
 description: Two-node k3s cluster on Oracle Cloud Always Free resources (Pulumi, Python)
 options:
   refresh: always
-config:
-  # DNS name of the Kubernetes API. Optional: without it, kubectl uses the public IP.
-  k3s:api_name: k3s-oci.trueadmin.ru

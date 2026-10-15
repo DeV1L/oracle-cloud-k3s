@@ -168,10 +168,15 @@ kubectl get nodes
 
 ## Use a DNS name for the Kubernetes API
 
-The DNS name of the API is `k3s:api_name` in `pulumi/Pulumi.yaml`. The server certificate contains it, and the kubeconfig of the server node uses it. Without it, the kubeconfig uses the cluster public IP. A change applies only to a new server node. To change the name on the live cluster:
+The DNS name of the API is the optional key `k3s:api_name` in the stack configuration. The server certificate contains it, and the kubeconfig of the server node uses it. Without it, the kubeconfig uses the cluster public IP. A change applies only to a new server node. To change the name on the live cluster:
 
 1. Create a DNS `A` record for the name. Point it to the cluster public IP (`pulumi stack output public_ip`).
-2. Set the name in `pulumi/Pulumi.yaml`, so that new server nodes get it.
+2. Set the name for new server nodes:
+
+```bash
+pulumi config set k3s:api_name <DNS name>
+```
+
 3. Connect to the server node with SSH. Open `/etc/rancher/k3s/config.yaml`. Add the DNS name to the list `tls-san`.
 4. Restart k3s on the server node. k3s adds the name to the certificate:
 

@@ -225,7 +225,7 @@ The other keys are optional:
 | `k3s:server_private_ip` | `10.0.1.10` | Private IP of the server node |
 | `k3s:agent_private_ip` | `10.0.1.11` | Private IP of the agent node |
 | `k3s:admin_cidr` | `0.0.0.0/0` | Source address range for SSH (port 22) and the Kubernetes API (port 6443) |
-| `k3s:api_name` | Set in `pulumi/Pulumi.yaml` | DNS name of the Kubernetes API. The certificate and the kubeconfig use it. Without it, the kubeconfig uses the cluster public IP. Change or remove it in `pulumi/Pulumi.yaml`. |
+| `k3s:api_name` | none | DNS name of the Kubernetes API. The certificate and the kubeconfig use it. Without it, the kubeconfig uses the cluster public IP. |
 | `k3s:disable` | `[]` | k3s components that are not installed |
 | `k3s:image_ocid` | latest Canonical Ubuntu 24.04 Minimal | Image for new nodes |
 | `k3s:swap_gb` | `2` | Swap file size per node in GB |
