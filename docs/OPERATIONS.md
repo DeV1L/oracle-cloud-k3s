@@ -88,19 +88,13 @@ pulumi stack --show-urns | grep 'Instance::'
 pulumi state unprotect '<instance URN>'
 ```
 
-4. Replace the instance. Read the preview. Only this instance and its public IP may change:
+4. Replace the instance. Read the preview. Only this instance may change:
 
 ```bash
 pulumi up --replace '<instance URN>'
 ```
 
-The new instance gets the protection again from the code. The server node keeps its reserved public IP. An agent node gets a new ephemeral public IP.
-
-5. Remove the old host key of the node from the local SSH client:
-
-```bash
-ssh-keygen -R <node public IP>
-```
+The new instance gets the protection again from the code. It gets a new ephemeral public IP. The cluster public IP of the load balancer stays.
 
 After a replacement of an agent node, delete its old node object. The new node has the same name, so the server node rejects it until then. The new node joins about 1 minute later:
 
@@ -112,7 +106,7 @@ A new server node starts a new, empty cluster. To replace the server node, repla
 
 ## Replace both nodes
 
-This makes a new, empty cluster with the same network, vault, join token and server public IP. All workloads and their data are lost.
+This makes a new, empty cluster with the same network, load balancer, vault, join token and cluster public IP. All workloads and their data are lost.
 
 CAUTION: both old instances are deleted first. When OCI has no capacity, the nodes are gone until capacity comes back. This can take days.
 
@@ -134,19 +128,13 @@ pulumi state unprotect --all --yes
 pulumi stack --show-urns | grep 'Instance::'
 ```
 
-4. Replace both instances. Use the URNs from step 3. Read the preview. Only the instances and their public IPs may change:
+4. Replace both instances. Use the URNs from step 3. Read the preview. Only the instances may change:
 
 ```bash
 pulumi up --replace '<server instance URN>' --replace '<agent instance URN>'
 ```
 
-5. Remove the old host key of the server node from the local SSH client. The agent node has a new public IP:
-
-```bash
-ssh-keygen -R "$(pulumi stack output server_public_ip)"
-```
-
-6. Wait about 5 minutes for the first boot. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
+5. Wait about 5 minutes for the first boot. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
 
 The agent node joins the new cluster on its own.
 
@@ -180,9 +168,9 @@ kubectl get nodes
 
 ## Use a DNS name for the Kubernetes API
 
-The server certificate contains the public IP of the server node and the API name `k3s:api_name`. With a DNS name as API name, the kubeconfig can use the name instead of the IP.
+The server certificate contains the cluster public IP of the load balancer and the API name `k3s:api_name`. With a DNS name as API name, the kubeconfig can use the name instead of the IP.
 
-1. Create a DNS `A` record for the name. Point it to the public IP of the server node.
+1. Create a DNS `A` record for the name. Point it to the cluster public IP (`pulumi stack output public_ip`).
 2. Set the API name for new nodes:
 
 ```bash
@@ -201,9 +189,9 @@ sudo systemctl restart k3s
 
 ## Rebuild the cluster and keep the vault
 
-This deletes the nodes, the public IPs and the network, and creates them again. The vault, the key, the secrets and the join token stay. The new nodes use the same join token.
+This deletes the nodes, the load balancer, the public IPs and the network, and creates them again. The vault, the key, the secrets and the join token stay. The new nodes use the same join token.
 
-CAUTION: this deletes the cluster and all data in it. The server node gets a new public IP. The free capacity can take days to come back.
+CAUTION: this deletes the cluster and all data in it. The cluster gets a new public IP. The free capacity can take days to come back.
 
 1. Check the capacity. Continue only with `AVAILABLE`:
 
@@ -217,13 +205,13 @@ CAUTION: this deletes the cluster and all data in it. The server node gets a new
 pulumi state unprotect --yes 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:cluster:K3sClusterComponent$oci:Core/instance:Instance::cluster-server' 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:cluster:K3sClusterComponent$oci:Core/instance:Instance::cluster-agent-1'
 ```
 
-3. Delete the network and the cluster. Type `yes` when Pulumi asks:
+3. Delete the network, the load balancer and the cluster. Type `yes` when Pulumi asks:
 
 ```bash
-pulumi destroy --target 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:network:NetworkComponent**' --target 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:cluster:K3sClusterComponent**'
+pulumi destroy --target 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:network:NetworkComponent**' --target 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:cluster:K3sClusterComponent**' --target 'urn:pulumi:default::oracle-cloud-k3s::oracle-cloud-k3s:loadbalancer:LoadBalancerComponent**'
 ```
 
-4. Create the network and the cluster again. The instances get the protection again from the code:
+4. Create the network, the load balancer and the cluster again. The instances get the protection again from the code:
 
 ```bash
 pulumi up
@@ -314,8 +302,6 @@ The output must not contain a `REJECT` rule with `icmp-host-prohibited`.
 ```bash
 sudo cat /var/log/k3s-bootstrap.log
 ```
-
-When the log ends with `No public IP found`, the node had no internet access for 10 minutes. The server node needs its public IP for internet access. Check the IP in the OCI console, then do step 5.
 
 3. Read the cloud-init log:
 

@@ -16,9 +16,8 @@ The bootstrap script does these steps:
 1. It makes a swap file (`swap_gb`, 2 GB by default).
 2. It removes the reject rules of the iptables firewall in the Ubuntu image.
 3. It turns off services that a node does not need, for example fwupd, multipathd and iscsid. The Minimal image does not have most of them.
-4. Server node only: it finds the public IP and adds it to the API certificate.
-5. It installs the pinned k3s version from `get.k3s.io`. It tries 5 times.
-6. Server node only: it writes `/home/ubuntu/kubeconfig.yaml` with the public IP.
+4. It installs the pinned k3s version from `get.k3s.io`.
+5. Server node only: it writes `/home/ubuntu/kubeconfig.yaml` with the cluster public IP.
 
 The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a second time.
 
@@ -29,7 +28,7 @@ The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a s
 | `token` | Both | The join token |
 | `node-ip` | Both | The private IP of the node |
 | `kubelet-arg` | Both | Memory reserved for the OS and k3s, and the eviction limit (`KUBELET_ARGS`) |
-| `tls-san` | Server | Additional names in the API certificate: the private IP and `api_name`. The bootstrap script adds the public IP. |
+| `tls-san` | Server | Additional names in the API certificate: the private IP, the cluster public IP of the load balancer and `api_name` |
 | `disable` | Server | k3s components that are not installed. The default is `traefik`. |
 | `write-kubeconfig-mode` | Server | `0644`: the kubeconfig `/etc/rancher/k3s/k3s.yaml` is readable for all users on the node |
 | `disable-network-policy` | Server | `true`: no network policy controller. It saves RAM. `NetworkPolicy` resources have no effect. |

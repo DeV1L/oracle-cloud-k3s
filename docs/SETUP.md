@@ -262,7 +262,7 @@ pulumi stack output
 
 ### 4. Get the kubeconfig and check the nodes
 
-The server node writes a kubeconfig for its public IP to `/home/ubuntu/kubeconfig.yaml`. Any local file name works.
+The server node writes a kubeconfig for the cluster public IP to `/home/ubuntu/kubeconfig.yaml`. Copy it from the public IP of the server node. 
 
 1. Copy the kubeconfig from the server node. The file exists about 2 minutes after `pulumi up` ends:
 

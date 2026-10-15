@@ -32,6 +32,7 @@ class NodeParams:
     token: str
     k3s_version: str
     node_ip: str
+    public_ip: str
     server_url: str
     api_name: str
     disable: List[str]
@@ -46,6 +47,7 @@ def _render(template_name: str, params: NodeParams) -> str:
         token=params.token,
         k3s_version=params.k3s_version,
         node_ip=params.node_ip,
+        public_ip=params.public_ip,
         server_url=params.server_url,
         api_name=params.api_name,
         disable=json.dumps(params.disable),

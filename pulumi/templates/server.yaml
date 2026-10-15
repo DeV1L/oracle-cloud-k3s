@@ -7,7 +7,7 @@ write_files:
     content: |
       token: "@{token}"
       node-ip: "@{node_ip}"
-      tls-san: ["@{node_ip}", "@{api_name}"]
+      tls-san: ["@{node_ip}", "@{public_ip}", "@{api_name}"]
       disable: @{disable}
       kubelet-arg: @{kubelet_args}
       write-kubeconfig-mode: "0644"
@@ -48,24 +48,6 @@ write_files:
         systemctl disable --now "$unit" 2>/dev/null || true
       done
 
-      # The public IP is not on the network interface: OCI translates it in
-      # the internet gateway. Pulumi attaches it shortly after the instance
-      # starts, so ask an outside service and retry until it answers.
-      public_ip=""
-      for attempt in $(seq 60); do
-        for url in https://ifconfig.me https://api.ipify.org; do
-          public_ip="$(curl -4 -sf --max-time 5 "$url" || true)"
-          [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break 2
-        done
-        sleep 10
-      done
-      [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "No public IP found"; exit 1; }
-
-      # Put the public IP into the server certificate, so that kubectl can
-      # connect to it directly. "tls-san+" appends to the list in config.yaml.
-      mkdir -p /etc/rancher/k3s/config.yaml.d
-      echo "tls-san+: [\"$public_ip\"]" > /etc/rancher/k3s/config.yaml.d/public-ip.yaml
-
       # Install k3s. The settings are in /etc/rancher/k3s/.
       if ! systemctl is-active --quiet k3s; then
         for attempt in 1 2 3 4 5; do
@@ -75,9 +57,10 @@ write_files:
       fi
       systemctl is-active k3s
 
-      # A kubeconfig for the owner: the public IP, and the API name instead of
-      # "default" for the cluster, the context and the user. Copy it with scp.
-      sed -e "s/127.0.0.1/$public_ip/" -e "s/: default$/: @{api_name}/" /etc/rancher/k3s/k3s.yaml > /home/ubuntu/kubeconfig.yaml
+      # A kubeconfig for the owner: the public IP of the load balancer, and
+      # the API name instead of "default" for the cluster, the context and
+      # the user. Copy it with scp.
+      sed -e "s/127.0.0.1/@{public_ip}/" -e "s/: default$/: @{api_name}/" /etc/rancher/k3s/k3s.yaml > /home/ubuntu/kubeconfig.yaml
       chown ubuntu:ubuntu /home/ubuntu/kubeconfig.yaml
       chmod 600 /home/ubuntu/kubeconfig.yaml
       echo "k3s bootstrap done: $(date -Is)"

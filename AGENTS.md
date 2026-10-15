@@ -36,14 +36,14 @@ Commands, from the repository root:
 
 Verified in the owner's tenancy (home region `eu-frankfurt-1`) in October 2026.
 
-- Always Free limits that matter here: 2 micro instances, only in availability domain AD-1 of this tenancy; 1 reserved public IP; 1 vault of type `DEFAULT`; 2 VCNs; 200 GB block storage.
-- The server node uses the reserved public IP. The agent node uses an ephemeral public IP. It needs it for internet access, because a NAT gateway is not free.
+- Always Free limits that matter here: 2 micro instances, only in availability domain AD-1 of this tenancy; 1 reserved public IP; 1 network load balancer; 1 vault of type `DEFAULT`; 2 VCNs; 200 GB block storage.
+- The network load balancer holds the reserved public IP. It forwards 6443 to the server node, and 80 and 443 to both nodes. Each node has an ephemeral public IP for internet access and SSH, because a NAT gateway is not free.
 - A deleted vault waits 7 to 30 days for its deletion and can still count against the limit of 1. To rebuild the cluster, keep the vault ("Rebuild the cluster and keep the vault" in `docs/OPERATIONS.md`).
 - OCI rejects changes to `user_data` and `ssh_authorized_keys`, and cloud-init runs only at the first boot. Therefore the instances are protected and ignore changes to the image and the metadata. A cloud-init change applies only to new nodes.
 - To test a cloud-init change without a new instance, copy the new bootstrap script to the live node and run it there. The script is safe to run a second time.
 - A replacement deletes the old instance first (`delete_before_replace`): the fixed private IP and the micro quota allow no second instance. A replaced agent node joins only after `kubectl delete node <name>`.
 - The security list is the only firewall. The Ubuntu image rejects inbound and forwarded traffic with iptables. The cloud-init removes these two reject rules.
-- The server node finds its public IP at the first boot through `ifconfig.me` or `api.ipify.org`. It puts the IP into the k3s certificate and writes `/home/ubuntu/kubeconfig.yaml`.
+- Pulumi creates the reserved public IP before the nodes and passes it to the cloud-init. The server node puts it into the k3s certificate and into `/home/ubuntu/kubeconfig.yaml`.
 - `Pulumi.yaml` sets `refresh: always`, so every preview sees resources that were deleted outside Pulumi.
 - The Pulumi CLI must be 3.268 or newer. Version 3.256 cannot log in to the state bucket (`BadDigest`).
 - Each node has 1 GB of RAM. The server node uses about 600 MB and some swap after the start, so little room is left for workloads. The nodes use Ubuntu 24.04 Minimal, and the cloud-init turns off services that a node does not need.

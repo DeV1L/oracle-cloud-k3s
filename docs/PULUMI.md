@@ -1,10 +1,10 @@
 # Pulumi program
 
-This document describes the Pulumi program in `pulumi/`: the components, the configuration, the outputs, the cloud-init and the cluster component.
+This document describes the Pulumi program in `pulumi/`: the components, the configuration, the outputs, the cloud-init, the load balancer and the cluster component.
 
 ## Overview
 
-`__main__.py` reads the configuration once and creates three components and a random join token.
+`__main__.py` reads the configuration once and creates four components and a random join token.
 
 ```mermaid
 flowchart TB
@@ -14,15 +14,19 @@ flowchart TB
     main --> token["RandomPassword<br/>k3s-token<br/>64 characters"]
     main --> network["NetworkComponent<br/>network.py"]
     main --> vaultc["VaultComponent<br/>vault.py"]
+    main --> lb["LoadBalancerComponent<br/>load_balancer.py"]
     main --> cluster["K3sClusterComponent<br/>cluster.py"]
 
     network --> netres["VCN, internet gateway,<br/>route table, security list, subnet"]
     vaultc --> vaultres["Vault, key,<br/>secrets join-token and kubeconfig"]
-    cluster --> clusterres["Instances server and agent-1,<br/>public IPs"]
+    lb --> lbres["Reserved public IP, network load balancer,<br/>backend sets, backends, listeners"]
+    cluster --> clusterres["Instances server and agent-1<br/>with ephemeral public IPs"]
 
     token -- "join token" --> vaultc
     token -- "join token" --> cluster
+    network -- "subnet ID" --> lb
     network -- "subnet ID" --> cluster
+    lb -- "cluster public IP" --> cluster
 
     cluster --> cloudinit["cloud_init.py"]
     templates["templates/server.yaml<br/>templates/agent.yaml"] --> cloudinit
@@ -33,7 +37,8 @@ flowchart TB
 |-----------|------------|---------------|
 | `NetworkComponent` | `oracle-cloud-k3s:network:NetworkComponent` | `vcn_id`, `subnet_id` |
 | `VaultComponent` | `oracle-cloud-k3s:vault:VaultComponent` | `vault_ocid`, `join_token_secret_ocid`, `kubeconfig_secret_ocid` |
-| `K3sClusterComponent` | `oracle-cloud-k3s:cluster:K3sClusterComponent` | `server_public_ip`, `agent_public_ip`, `api_server_url`, `ssh_user` |
+| `LoadBalancerComponent` | `oracle-cloud-k3s:loadbalancer:LoadBalancerComponent` | `public_ip`, `api_server_url` |
+| `K3sClusterComponent` | `oracle-cloud-k3s:cluster:K3sClusterComponent` | `server_public_ip`, `agent_public_ip`, `ssh_user` |
 
 ## Components and resources
 
@@ -85,26 +90,30 @@ The program creates one join token. The server node and the agent node get the s
 
 In `cluster.py`, the function `cloud_init(render, node_ip)` makes the cloud-init of one node:
 
-1. It calls `join_token.apply(with_token)`.
-2. `with_token(token)` builds the `NodeParams` of the node and calls `render_server` or `render_agent`.
+1. It calls `pulumi.Output.all(join_token, public_ip).apply(with_values)`. Both values exist only after Pulumi creates them.
+2. `with_values([token, public_ip])` builds the `NodeParams` of the node and calls `render_server` or `render_agent`.
 3. The result is the finished cloud-init file as an `Output[str]`.
 
 `_instance()` encodes the file in Base64 and gives it to OCI as `user_data`. cloud-init runs it once, at the first boot.
 
+## Load balancer component
+
+`LoadBalancerComponent` creates the entry point of the cluster:
+
+1. The reserved public IP. It is not attached to a node.
+2. The network load balancer with this IP.
+3. For each port (6443, 80, 443): a backend set with a TCP health check, a backend for each node and a listener.
+
+The backends use the fixed private IPs of the nodes, so the load balancer does not wait for the instances. The cluster component gets the reserved IP for the cloud-init, so the instances wait for the IP.
+
 ## Cluster component
 
-`K3sClusterComponent` creates the resources in this order:
-
-1. The server node instance, then its reserved public IP.
-2. The agent node instance, then its ephemeral public IP.
-
-A public IP attaches to the private IP object of an instance. This object exists only after the instance exists, so the instance comes first.
+`K3sClusterComponent` creates the server node instance and the agent node instance. Each instance gets an ephemeral public IP from OCI (`assign_public_ip`). OCI deletes this IP with the instance.
 
 | Method | What it does |
 |--------|--------------|
 | `_latest_image_id()` | Finds the newest Ubuntu 24.04 Minimal image for the micro shape. The program does not use it when `image_ocid` is set. |
-| `_instance(role, private_ip, cloud_init)` | Creates one instance with a fixed private IP and no public IP |
-| `_private_ip_id(instance, private_ip)` | Finds the ID of the private IP object of the instance |
+| `_instance(role, private_ip, cloud_init)` | Creates one instance with a fixed private IP and an ephemeral public IP |
 
 The resource options:
 
@@ -113,7 +122,5 @@ The resource options:
 | Instance | `protect=True` | Pulumi does not delete the instance. |
 | Instance | `ignore_changes=["sourceDetails", "metadata"]` | A new image or a new cloud-init does not replace the instance. They apply only to a new instance. |
 | Instance | `delete_before_replace=True` | A replacement deletes the old instance first. The fixed private IP and the micro limit allow no second instance. |
-| Reserved public IP | None | A new server node instance gets the same IP. Pulumi moves the IP to the new private IP. |
-| Ephemeral public IP | `replace_on_changes=["privateIpId"]`, `delete_before_replace=True` | A new agent node instance gets a new IP. OCI cannot move an ephemeral IP. |
 
 The resource name is part of the URN. A new name for an instance, for example `agent` instead of `agent-1`, replaces the instance.

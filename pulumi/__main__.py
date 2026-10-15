@@ -10,6 +10,7 @@ import pulumi_random as random
 
 from components.cluster import K3sClusterComponent
 from components.config import load_config
+from components.load_balancer import LoadBalancerComponent
 from components.network import NetworkComponent
 from components.vault import VaultComponent
 
@@ -24,7 +25,14 @@ join_token = random.RandomPassword(
 
 network = NetworkComponent("network", config)
 vault = VaultComponent("vault", config, join_token=join_token.result)
-cluster = K3sClusterComponent("cluster", config, subnet_id=network.subnet_id, join_token=join_token.result)
+load_balancer = LoadBalancerComponent("lb", config, subnet_id=network.subnet_id)
+cluster = K3sClusterComponent(
+    "cluster",
+    config,
+    subnet_id=network.subnet_id,
+    join_token=join_token.result,
+    public_ip=load_balancer.ip_address,
+)
 
 pulumi.export("k3s_version", config.k3s_version)
 pulumi.export("server_private_ip", config.server_private_ip)

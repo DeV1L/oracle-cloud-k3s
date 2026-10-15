@@ -9,15 +9,31 @@ This document describes the addresses, the routing, the DNS and the firewalls of
 | VCN `k3s-vcn` | `10.0.0.0/16` | `vcn_cidr` |
 | Subnet `k3s-subnet` | `10.0.1.0/24` | `subnet_cidr` |
 | Server node, agent node | `10.0.1.10`, `10.0.1.11` | `server_private_ip`, `agent_private_ip` |
+| Cluster public IP (reserved, on the load balancer) | Assigned by OCI | Stack output `public_ip` |
+| Node public IPs (ephemeral, new after a replacement) | Assigned by OCI | Stack outputs `server_public_ip`, `agent_public_ip` |
 | Pod network | `10.42.0.0/16`, one `/24` for each node | k3s default |
 | Service network | `10.43.0.0/16`. The cluster DNS is `10.43.0.10`. | k3s default |
 
 ## Routing
 
 - The route table `k3s-rt` sends `0.0.0.0/0` to the internet gateway `k3s-igw`. Traffic inside the VCN uses the local route of the VCN.
-- The network interface of a node has only the private IP. The internet gateway translates between the public IP and the private IP. Therefore the server node asks `ifconfig.me` for its public IP.
-- Each node goes to the internet through its own public IP. A NAT gateway is not free, so the agent node has an ephemeral public IP.
+- The network interface of a node has only the private IP. The internet gateway translates between the ephemeral public IP and the private IP.
+- Each node goes to the internet through its own ephemeral public IP. A NAT gateway is not free.
 - Pod traffic between the nodes uses flannel with VXLAN (UDP port 8472) between the private IPs. Pod traffic to the internet leaves with the IP of the node (masquerade).
+
+## Load balancer
+
+The network load balancer `k3s-nlb` holds the cluster public IP. It is the entry point of the cluster. It works on layer 4 (TCP).
+
+| Port | Backends | Use |
+|------|----------|-----|
+| 6443 | Server node | Kubernetes API (kubectl) |
+| 80 | Both nodes | HTTP to `LoadBalancer` services |
+| 443 | Both nodes | HTTPS to `LoadBalancer` services |
+
+- The backends are the fixed private IPs of the nodes. A node replacement does not change the load balancer.
+- The health check opens a TCP connection to the port. A port without a listener on the node is `CRITICAL`, for example 443 until a service uses it.
+- The backends see the private IP of the load balancer as the source. The security list checks the client IP when the packet enters the load balancer.
 
 ## DNS
 
@@ -51,4 +67,4 @@ k3s adds its own iptables chains (`KUBE-*`, `FLANNEL-*`) for services and the po
 
 ## Workload traffic
 
-traefik is disabled, so the cluster has no ingress controller after the first boot. A `LoadBalancer` service gets no OCI load balancer. The k3s service load balancer (servicelb) runs a pod on each node. This pod opens the service port on the node, so the public IP of each node accepts the traffic. The security list opens only ports 80 and 443 to the internet.
+traefik is disabled, so the cluster has no ingress controller after the first boot. Kubernetes does not create OCI load balancers. The k3s service load balancer (servicelb) runs a pod on each node for each `LoadBalancer` service. This pod opens the service port on the node. The network load balancer forwards ports 80 and 443 to both nodes. Other ports do not reach the cluster.

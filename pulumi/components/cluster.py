@@ -1,5 +1,5 @@
 """
-k3s cluster: one server node and one agent node, each with a public IP.
+k3s cluster: one server node and one agent node, each with an ephemeral public IP.
 
 CAUTION: OCI rejects a change to `user_data` or `ssh_authorized_keys` on a live
 instance, so Pulumi would replace the instance. Free micro capacity is not
@@ -8,7 +8,7 @@ metadata. A node replacement is a manual step (`pulumi up --replace`).
 """
 
 import base64
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import pulumi
 import pulumi_oci as oci
@@ -18,7 +18,7 @@ from .config import ProjectConfig
 
 
 class K3sClusterComponent(pulumi.ComponentResource):
-    """Server node, agent node and their public IPs."""
+    """Server node and agent node."""
 
     def __init__(
         self,
@@ -26,6 +26,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
         config: ProjectConfig,
         subnet_id: pulumi.Output[str],
         join_token: pulumi.Output[str],
+        public_ip: pulumi.Output[str],
         opts: Optional[pulumi.ResourceOptions] = None,
     ):
         super().__init__("oracle-cloud-k3s:cluster:K3sClusterComponent", name, None, opts)
@@ -38,12 +39,14 @@ class K3sClusterComponent(pulumi.ComponentResource):
         def cloud_init(render: Callable[[NodeParams], str], node_ip: str) -> pulumi.Output[str]:
             """The cloud-init of one node. All nodes get the same join token."""
 
-            def with_token(token: str) -> str:
+            def with_values(values: List[str]) -> str:
+                token, cluster_ip = values
                 return render(
                     NodeParams(
                         token=token,
                         k3s_version=config.k3s_version,
                         node_ip=node_ip,
+                        public_ip=cluster_ip,
                         server_url=config.server_url,
                         api_name=config.api_name,
                         disable=config.disable,
@@ -52,61 +55,29 @@ class K3sClusterComponent(pulumi.ComponentResource):
                     )
                 )
 
-            # The token exists only after Pulumi creates it. `apply` calls `with_token` with the token then.
-            return join_token.apply(with_token)
+            # The token and the public IP exist only after Pulumi creates them.
+            # `apply` calls `with_values` with both values then.
+            return pulumi.Output.all(join_token, public_ip).apply(with_values)
 
-        # Server node: the instance, then its reserved public IP.
         self.server = self._instance(
             "server",
             config.server_private_ip,
             cloud_init(render_server, config.server_private_ip),
         )
-        self.server_public_ip = oci.core.PublicIp(
-            f"{name}-server-ip",
-            compartment_id=config.compartment_ocid,
-            lifetime="RESERVED",
-            private_ip_id=self._private_ip_id(self.server, config.server_private_ip),
-            display_name=config.name("server-ip"),
-            freeform_tags=config.tags,
-            opts=pulumi.ResourceOptions(parent=self),
-        )
-
-        # Agent node: the instance, then its ephemeral public IP.
         self.agent = self._instance(
             "agent-1",
             config.agent_private_ip,
             cloud_init(render_agent, config.agent_private_ip),
         )
-        self.agent_public_ip = oci.core.PublicIp(
-            f"{name}-agent-1-ip",
-            compartment_id=config.compartment_ocid,
-            lifetime="EPHEMERAL",
-            private_ip_id=self._private_ip_id(self.agent, config.agent_private_ip),
-            display_name=config.name("agent-1-ip"),
-            freeform_tags=config.tags,
-            # OCI deletes an ephemeral IP with its VNIC and cannot move it to
-            # another private IP: a new instance needs a new ephemeral IP.
-            opts=pulumi.ResourceOptions(
-                parent=self,
-                replace_on_changes=["privateIpId"],
-                delete_before_replace=True,
-            ),
-        )
-
-        server_ip = self.server_public_ip.ip_address
-        agent_ip = self.agent_public_ip.ip_address
-        api_server_url = server_ip.apply(lambda ip: f"https://{ip}:{config.API_PORT}")
 
         self.register_outputs(
             {
-                "server_public_ip": server_ip,
-                "agent_public_ip": agent_ip,
-                "api_server_url": api_server_url,
+                "server_public_ip": self.server.public_ip,
+                "agent_public_ip": self.agent.public_ip,
             }
         )
-        pulumi.export("server_public_ip", server_ip)
-        pulumi.export("agent_public_ip", agent_ip)
-        pulumi.export("api_server_url", api_server_url)
+        pulumi.export("server_public_ip", self.server.public_ip)
+        pulumi.export("agent_public_ip", self.agent.public_ip)
         pulumi.export("ssh_user", config.SSH_USER)
 
     def _latest_image_id(self) -> pulumi.Output[str]:
@@ -121,7 +92,7 @@ class K3sClusterComponent(pulumi.ComponentResource):
         return images.images[0].id
 
     def _instance(self, role: str, private_ip: str, cloud_init: pulumi.Output[str]) -> oci.core.Instance:
-        """One node instance with a fixed private IP and no public IP."""
+        """One node instance with a fixed private IP and an ephemeral public IP."""
         config = self._config
         display_name = config.name(role)
 
@@ -133,7 +104,8 @@ class K3sClusterComponent(pulumi.ComponentResource):
             display_name=display_name,
             create_vnic_details=oci.core.InstanceCreateVnicDetailsArgs(
                 subnet_id=self._subnet_id,
-                assign_public_ip="false",
+                # The node needs it for internet access: a NAT gateway is not free.
+                assign_public_ip="true",
                 private_ip=private_ip,
                 hostname_label=display_name,
                 display_name=display_name,
@@ -164,14 +136,4 @@ class K3sClusterComponent(pulumi.ComponentResource):
                 ignore_changes=["sourceDetails", "metadata"],
                 delete_before_replace=True,
             ),
-        )
-
-    def _private_ip_id(self, instance: oci.core.Instance, private_ip: str) -> pulumi.Output[str]:
-        """ID of the private IP object of an instance, to attach a public IP to.
-
-        The object exists only after the instance exists: `instance.id` makes
-        the lookup wait for it.
-        """
-        return pulumi.Output.all(instance.id, self._subnet_id).apply(
-            lambda args: oci.core.get_private_ips(ip_address=private_ip, subnet_id=args[1]).private_ips[0].id
         )
