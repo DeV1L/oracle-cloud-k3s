@@ -12,6 +12,40 @@ write_files:
       kubelet-arg: @{kubelet_args}
       write-kubeconfig-mode: "0644"
       disable-network-policy: true
+  # k3s applies this file at the start. traefik gets Let's Encrypt
+  # certificates for every host name in an Ingress, and redirects HTTP to
+  # HTTPS. The certificates are on a volume on the node of the traefik pod.
+  - path: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+    permissions: "0600"
+    content: |
+      apiVersion: helm.cattle.io/v1
+      kind: HelmChartConfig
+      metadata:
+        name: traefik
+        namespace: kube-system
+      spec:
+        valuesContent: |-
+          certificatesResolvers:
+            letsencrypt:
+              acme:
+                caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+                storage: /data/acme.json
+                httpChallenge:
+                  entryPoint: web
+          persistence:
+            enabled: true
+          ports:
+            web:
+              http:
+                redirections:
+                  entryPoint:
+                    to: websecure
+                    scheme: https
+                    permanent: true
+            websecure:
+              http:
+                tls:
+                  certResolver: letsencrypt
   - path: /usr/local/sbin/k3s-bootstrap.sh
     permissions: "0755"
     content: |

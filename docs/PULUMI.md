@@ -122,5 +122,6 @@ The resource options:
 | Instance | `protect=True` | Pulumi does not delete the instance. |
 | Instance | `ignore_changes=["sourceDetails", "metadata"]` | A new image or a new cloud-init does not replace the instance. They apply only to a new instance. |
 | Instance | `delete_before_replace=True` | A replacement deletes the old instance first. The fixed private IP and the micro limit allow no second instance. |
+| Reserved public IP | `ignore_changes=["privateIpId"]` | The load balancer attaches the IP to its own private IP. Pulumi does not detach it again. |
 
 The resource name is part of the URN. A new name for an instance, for example `agent` instead of `agent-1`, replaces the instance.

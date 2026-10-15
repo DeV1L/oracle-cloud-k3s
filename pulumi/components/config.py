@@ -23,7 +23,7 @@ class ProjectConfig:
     DEFAULT_AGENT_PRIVATE_IP = "10.0.1.11"
     DEFAULT_ADMIN_CIDR = "0.0.0.0/0"
     DEFAULT_API_NAME = "oci-k3s"
-    DEFAULT_DISABLE = ["traefik"]
+    DEFAULT_DISABLE = []
     DEFAULT_SWAP_GB = 2
 
     # Fixed values, not stack configuration keys. A change can replace an

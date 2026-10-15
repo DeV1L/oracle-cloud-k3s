@@ -34,7 +34,8 @@ class LoadBalancerComponent(pulumi.ComponentResource):
             lifetime="RESERVED",
             display_name=config.name("lb-ip"),
             freeform_tags=config.tags,
-            opts=child,
+            # OCI connects the IP to the load balancer. Without this option, Pulumi sees the connection as drift and removes it.
+            opts=pulumi.ResourceOptions(parent=self, ignore_changes=["privateIpId"]),
         )
 
         self.nlb = oci.networkloadbalancer.NetworkLoadBalancer(
