@@ -2,6 +2,8 @@
 
 k3s is a small Kubernetes distribution in one binary. The server node runs the control plane and workloads. The agent node runs workloads only.
 
+The nodes use the image Canonical Ubuntu 24.04 Minimal. It has fewer packages and services than the full image, so more RAM is free.
+
 ## Cloud-init
 
 Each instance gets a cloud-init file from `pulumi/templates/` as `user_data`. cloud-init runs it once, at the first boot. The file does two things:
@@ -13,9 +15,10 @@ The bootstrap script does these steps:
 
 1. It makes a swap file (`swap_gb`, 2 GB by default).
 2. It removes the reject rules of the iptables firewall in the Ubuntu image.
-3. Server node only: it finds the public IP and adds it to the API certificate.
-4. It installs the pinned k3s version from `get.k3s.io`. It tries 5 times.
-5. Server node only: it writes `/home/ubuntu/kubeconfig.yaml` with the public IP.
+3. It turns off services that a node does not need, for example fwupd, multipathd and iscsid. The Minimal image does not have most of them.
+4. Server node only: it finds the public IP and adds it to the API certificate.
+5. It installs the pinned k3s version from `get.k3s.io`. It tries 5 times.
+6. Server node only: it writes `/home/ubuntu/kubeconfig.yaml` with the public IP.
 
 The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a second time.
 
@@ -29,10 +32,11 @@ The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a s
 | `tls-san` | Server | Additional names in the API certificate: the private IP and `api_name`. The bootstrap script adds the public IP. |
 | `disable` | Server | k3s components that are not installed. The default is `traefik`. |
 | `write-kubeconfig-mode` | Server | `0644`: the kubeconfig `/etc/rancher/k3s/k3s.yaml` is readable for all users on the node |
+| `disable-network-policy` | Server | `true`: no network policy controller. It saves RAM. `NetworkPolicy` resources have no effect. |
 
 The agent node joins the server node at `https://10.0.1.10:6443` (`K3S_URL`).
 
-The k3s components that stay on: CoreDNS, the local-path storage provisioner, the service load balancer (servicelb), metrics-server, flannel and the network policy controller.
+The k3s components that stay on: CoreDNS, the local-path storage provisioner, the service load balancer (servicelb), metrics-server and flannel.
 
 ## Change the configuration of a live node
 

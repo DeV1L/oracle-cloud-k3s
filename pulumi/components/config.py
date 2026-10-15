@@ -30,10 +30,10 @@ class ProjectConfig:
     # instance or leave the Always Free limits.
     SHAPE = "VM.Standard.E2.1.Micro"
     IMAGE_OS = "Canonical Ubuntu"
-    IMAGE_OS_VERSION = "24.04"
+    IMAGE_OS_VERSION = "24.04 Minimal"
     SSH_USER = "ubuntu"
     API_PORT = 6443
-    # Optional Oracle Cloud Agent plugins use 100 MB of RAM or more.
+    # Optional Oracle Cloud Agent plugins use 50 MB of RAM or more.
     # Compute Instance Monitoring stays on, so Oracle sees the node utilization.
     DISABLED_AGENT_PLUGINS = [
         "Management Agent",
@@ -47,7 +47,7 @@ class ProjectConfig:
     KUBELET_ARGS = [
         "system-reserved=memory=128Mi",
         "kube-reserved=memory=128Mi",
-        "eviction-hard=memory.available<100Mi",
+        "eviction-hard=memory.available<50Mi",
     ]
 
     region: str

@@ -46,7 +46,7 @@ Verified in the owner's tenancy (home region `eu-frankfurt-1`) in October 2026.
 - The server node finds its public IP at the first boot through `ifconfig.me` or `api.ipify.org`. It puts the IP into the k3s certificate and writes `/home/ubuntu/kubeconfig.yaml`.
 - `Pulumi.yaml` sets `refresh: always`, so every preview sees resources that were deleted outside Pulumi.
 - The Pulumi CLI must be 3.268 or newer. Version 3.256 cannot log in to the state bucket (`BadDigest`).
-- Each node has 1 GB of RAM. The server node uses about 690 MB and some swap after the start, so little room is left for workloads.
+- Each node has 1 GB of RAM. The server node uses about 600 MB and some swap after the start, so little room is left for workloads. The nodes use Ubuntu 24.04 Minimal, and the cloud-init turns off services that a node does not need.
 
 ## Code style
 

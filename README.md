@@ -5,7 +5,7 @@ A Pulumi (Python) project that creates a small k3s cluster on Oracle Cloud Infra
 ## What it creates
 
 - One virtual cloud network (VCN) with a public subnet, an internet gateway and a security list.
-- Two `VM.Standard.E2.1.Micro` instances with Ubuntu 24.04: one k3s server node and one k3s agent node.
+- Two `VM.Standard.E2.1.Micro` instances with Ubuntu 24.04 Minimal: one k3s server node and one k3s agent node.
 - A reserved public IP for the server node and an ephemeral public IP for the agent node.
 - One OCI Vault with two secrets: the k3s join token and the kubeconfig.
 - k3s, installed by cloud-init at the first boot, with a pinned version.

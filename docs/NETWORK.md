@@ -47,7 +47,7 @@ The default of `admin_cidr` is `0.0.0.0/0`. Then only the SSH key and the client
 
 The Ubuntu image also has an iptables firewall. The cloud-init turns it off, so ports open only in the security list.
 
-k3s adds its own iptables chains (`KUBE-*`, `FLANNEL-*`) for services, network policies and the pod network.
+k3s adds its own iptables chains (`KUBE-*`, `FLANNEL-*`) for services and the pod network.
 
 ## Workload traffic
 

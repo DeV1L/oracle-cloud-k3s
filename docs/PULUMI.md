@@ -102,7 +102,7 @@ A public IP attaches to the private IP object of an instance. This object exists
 
 | Method | What it does |
 |--------|--------------|
-| `_latest_image_id()` | Finds the newest Ubuntu 24.04 image for the micro shape. The program does not use it when `image_ocid` is set. |
+| `_latest_image_id()` | Finds the newest Ubuntu 24.04 Minimal image for the micro shape. The program does not use it when `image_ocid` is set. |
 | `_instance(role, private_ip, cloud_init)` | Creates one instance with a fixed private IP and no public IP |
 | `_private_ip_id(instance, private_ip)` | Finds the ID of the private IP object of the instance |
 
