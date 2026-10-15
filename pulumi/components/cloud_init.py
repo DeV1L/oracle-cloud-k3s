@@ -32,9 +32,10 @@ class NodeParams:
     token: str
     k3s_version: str
     node_ip: str
-    public_ip: str
     server_url: str
-    api_name: str
+    api_host: str
+    tls_san: List[str]
+    kubeconfig_name: str
     disable: List[str]
     swap_gb: int
     kubelet_args: List[str]
@@ -47,9 +48,10 @@ def _render(template_name: str, params: NodeParams) -> str:
         token=params.token,
         k3s_version=params.k3s_version,
         node_ip=params.node_ip,
-        public_ip=params.public_ip,
         server_url=params.server_url,
-        api_name=params.api_name,
+        api_host=params.api_host,
+        tls_san=json.dumps(params.tls_san),
+        kubeconfig_name=params.kubeconfig_name,
         disable=json.dumps(params.disable),
         swap_gb=params.swap_gb,
         kubelet_args=json.dumps(params.kubelet_args),

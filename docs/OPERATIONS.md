@@ -168,15 +168,10 @@ kubectl get nodes
 
 ## Use a DNS name for the Kubernetes API
 
-The server certificate contains the cluster public IP of the load balancer and the API name `k3s:api_name`. With a DNS name as API name, the kubeconfig can use the name instead of the IP.
+The DNS name of the API is `k3s:api_name` in `pulumi/Pulumi.yaml`. The server certificate contains it, and the kubeconfig of the server node uses it. Without it, the kubeconfig uses the cluster public IP. A change applies only to a new server node. To change the name on the live cluster:
 
 1. Create a DNS `A` record for the name. Point it to the cluster public IP (`pulumi stack output public_ip`).
-2. Set the API name for new nodes:
-
-```bash
-pulumi config set k3s:api_name <DNS name>
-```
-
+2. Set the name in `pulumi/Pulumi.yaml`, so that new server nodes get it.
 3. Connect to the server node with SSH. Open `/etc/rancher/k3s/config.yaml`. Add the DNS name to the list `tls-san`.
 4. Restart k3s on the server node. k3s adds the name to the certificate:
 
@@ -186,6 +181,39 @@ sudo systemctl restart k3s
 
 5. In the local kubeconfig, change the `server:` line to `https://<DNS name>:6443`.
 6. Store the kubeconfig in the vault. See the setup guide, part 2, step 4.
+
+## Publish an app with HTTPS
+
+traefik gets a Let's Encrypt certificate for every host name in an `Ingress`. It redirects HTTP to HTTPS.
+
+1. Create a DNS `A` record for the host name. Point it to the cluster public IP (`pulumi stack output public_ip`).
+2. Create a `Deployment` and a `Service` of type `ClusterIP` for the app.
+3. Create an `Ingress` with the host name in `rules` and in `tls`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: my-app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - my-app.example.com
+```
+
+4. Apply the files with `kubectl --kubeconfig ~/.kube/oci-k3s.yaml apply -f <file>`. traefik gets the certificate in a few seconds.
 
 ## Rebuild the cluster and keep the vault
 
@@ -220,7 +248,6 @@ pulumi up
 5. Copy the kubeconfig from the server node and store it in the vault. Do the steps in the setup guide, part 2, step 4.
 
 The destroy needs about 2 minutes. `pulumi up` needs about 1 minute. The nodes are `Ready` about 4 minutes later.
-
 ## Destroy everything
 
 CAUTION: this deletes the cluster and all data in it. OCI does not delete the vault, the key and the secrets at once. It schedules the deletion for a date in 7 to 30 days.

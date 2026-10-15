@@ -7,7 +7,7 @@ write_files:
     content: |
       token: "@{token}"
       node-ip: "@{node_ip}"
-      tls-san: ["@{node_ip}", "@{public_ip}", "@{api_name}"]
+      tls-san: @{tls_san}
       disable: @{disable}
       kubelet-arg: @{kubelet_args}
       write-kubeconfig-mode: "0644"
@@ -28,7 +28,6 @@ write_files:
           certificatesResolvers:
             letsencrypt:
               acme:
-                caServer: https://acme-staging-v02.api.letsencrypt.org/directory
                 storage: /data/acme.json
                 httpChallenge:
                   entryPoint: web
@@ -91,10 +90,10 @@ write_files:
       fi
       systemctl is-active k3s
 
-      # A kubeconfig for the owner: the public IP of the load balancer, and
-      # the API name instead of "default" for the cluster, the context and
-      # the user. Copy it with scp.
-      sed -e "s/127.0.0.1/@{public_ip}/" -e "s/: default$/: @{api_name}/" /etc/rancher/k3s/k3s.yaml > /home/ubuntu/kubeconfig.yaml
+      # A kubeconfig for the owner: the DNS name of the API or the public IP
+      # of the load balancer, and a name instead of "default" for the cluster,
+      # the context and the user. Copy it with scp.
+      sed -e "s/127.0.0.1/@{api_host}/" -e "s/: default$/: @{kubeconfig_name}/" /etc/rancher/k3s/k3s.yaml > /home/ubuntu/kubeconfig.yaml
       chown ubuntu:ubuntu /home/ubuntu/kubeconfig.yaml
       chmod 600 /home/ubuntu/kubeconfig.yaml
       echo "k3s bootstrap done: $(date -Is)"

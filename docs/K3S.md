@@ -28,7 +28,7 @@ The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a s
 | `token` | Both | The join token |
 | `node-ip` | Both | The private IP of the node |
 | `kubelet-arg` | Both | Memory reserved for the OS and k3s, and the eviction limit (`KUBELET_ARGS`) |
-| `tls-san` | Server | Additional names in the API certificate: the private IP, the cluster public IP of the load balancer and `api_name` |
+| `tls-san` | Server | Additional names in the API certificate: the private IP, the cluster public IP of the load balancer and the DNS name `api_name`, when it is set |
 | `disable` | Server | k3s components that are not installed. The default is none. |
 | `write-kubeconfig-mode` | Server | `0644`: the kubeconfig `/etc/rancher/k3s/k3s.yaml` is readable for all users on the node |
 | `disable-network-policy` | Server | `true`: no network policy controller. It saves RAM. `NetworkPolicy` resources have no effect. |
@@ -36,6 +36,19 @@ The script writes its log to `/var/log/k3s-bootstrap.log`. It is safe to run a s
 The agent node joins the server node at `https://10.0.1.10:6443` (`K3S_URL`).
 
 The k3s components that stay on: CoreDNS, the local-path storage provisioner, the service load balancer (servicelb), metrics-server, the traefik ingress controller and flannel.
+
+## traefik and HTTPS
+
+The cloud-init of the server node writes `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`. k3s applies it at the start. It sets:
+
+| Setting | What it does |
+|---------|--------------|
+| Certificate resolver `letsencrypt` | Gets Let's Encrypt certificates with the HTTP-01 challenge on port 80. No email address. |
+| `websecure` uses the resolver | Every host name in an `Ingress` gets a certificate. The app needs no annotation. |
+| Redirect from `web` to `websecure` | HTTP requests go to HTTPS. |
+| Volume (`persistence`) | 128 MiB from the local-path provisioner for `/data/acme.json`. The volume is on the node of the traefik pod, so traefik stays on this node. |
+
+Read "Publish an app with HTTPS" in `OPERATIONS.md`.
 
 ## Change the configuration of a live node
 

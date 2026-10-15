@@ -69,4 +69,4 @@ k3s adds its own iptables chains (`KUBE-*`, `FLANNEL-*`) for services and the po
 
 Kubernetes does not create OCI load balancers. The k3s service load balancer (servicelb) runs a pod on each node for each `LoadBalancer` service. This pod opens the service port on the node. The network load balancer forwards ports 80 and 443 to both nodes. Other ports do not reach the cluster.
 
-servicelb holds a port on the node, so only one `LoadBalancer` service can use port 80 and one can use port 443. The traefik ingress controller of k3s uses both ports. An app gets a `ClusterIP` service and an `Ingress`. traefik routes the requests by host name and path.
+servicelb holds a port on the node, so only one `LoadBalancer` service can use port 80 and one can use port 443. The traefik ingress controller of k3s uses both ports. An app gets a `ClusterIP` service and an `Ingress`. traefik routes the requests by host name and path. It redirects HTTP to HTTPS and gets a Let's Encrypt certificate for every host name (read `K3S.md`).

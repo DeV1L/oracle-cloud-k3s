@@ -22,7 +22,6 @@ class ProjectConfig:
     DEFAULT_SERVER_PRIVATE_IP = "10.0.1.10"
     DEFAULT_AGENT_PRIVATE_IP = "10.0.1.11"
     DEFAULT_ADMIN_CIDR = "0.0.0.0/0"
-    DEFAULT_API_NAME = "oci-k3s"
     DEFAULT_DISABLE = []
     DEFAULT_SWAP_GB = 2
 
@@ -33,6 +32,8 @@ class ProjectConfig:
     IMAGE_OS_VERSION = "24.04 Minimal"
     SSH_USER = "ubuntu"
     API_PORT = 6443
+    # Name of the cluster, the context and the user in the kubeconfig.
+    KUBECONFIG_NAME = "oci-k3s"
     # Optional Oracle Cloud Agent plugins use 50 MB of RAM or more.
     # Compute Instance Monitoring stays on, so Oracle sees the node utilization.
     DISABLED_AGENT_PLUGINS = [
@@ -61,7 +62,7 @@ class ProjectConfig:
     server_private_ip: str
     agent_private_ip: str
     admin_cidr: str
-    api_name: str
+    api_name: Optional[str]
     disable: List[str]
     image_ocid: Optional[str]
     swap_gb: int
@@ -75,6 +76,10 @@ class ProjectConfig:
             "project": "oracle-cloud-k3s",
             "stack": self.stack,
         }
+
+    def api_host(self, public_ip: str) -> str:
+        """Host of the Kubernetes API for kubectl: the DNS name when it is set, else the public IP."""
+        return self.api_name or public_ip
 
     @property
     def server_url(self) -> str:
@@ -104,7 +109,7 @@ def load_config() -> ProjectConfig:
         server_private_ip=k3s.get("server_private_ip") or ProjectConfig.DEFAULT_SERVER_PRIVATE_IP,
         agent_private_ip=k3s.get("agent_private_ip") or ProjectConfig.DEFAULT_AGENT_PRIVATE_IP,
         admin_cidr=k3s.get("admin_cidr") or ProjectConfig.DEFAULT_ADMIN_CIDR,
-        api_name=k3s.get("api_name") or ProjectConfig.DEFAULT_API_NAME,
+        api_name=k3s.get("api_name"),
         disable=ProjectConfig.DEFAULT_DISABLE if disable is None else disable,
         image_ocid=k3s.get("image_ocid"),
         swap_gb=k3s.get_int("swap_gb") or ProjectConfig.DEFAULT_SWAP_GB,

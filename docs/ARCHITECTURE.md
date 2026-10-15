@@ -64,7 +64,7 @@ sequenceDiagram
     Pulumi->>Server: create the instance with user_data (with the public IP)
     Pulumi->>Agent: create the instance with user_data
     Note over Server,Agent: cloud-init: swap, iptables
-    Server->>Server: install k3s server, with the public IP in the certificate
+    Server->>Server: install k3s server, with the public IP and the DNS name in the certificate
     Server->>Server: write /home/ubuntu/kubeconfig.yaml
     Agent->>Server: install k3s agent, join at 10.0.1.10:6443 with the join token
     Owner->>Server: scp kubeconfig.yaml

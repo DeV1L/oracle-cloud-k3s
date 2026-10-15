@@ -46,9 +46,11 @@ class K3sClusterComponent(pulumi.ComponentResource):
                         token=token,
                         k3s_version=config.k3s_version,
                         node_ip=node_ip,
-                        public_ip=cluster_ip,
                         server_url=config.server_url,
-                        api_name=config.api_name,
+                        api_host=config.api_host(cluster_ip),
+                        # Names in the API certificate. The DNS name is optional.
+                        tls_san=[node_ip, cluster_ip] + ([config.api_name] if config.api_name else []),
+                        kubeconfig_name=config.KUBECONFIG_NAME,
                         disable=config.disable,
                         swap_gb=config.swap_gb,
                         kubelet_args=config.KUBELET_ARGS,
