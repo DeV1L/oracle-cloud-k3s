@@ -13,19 +13,20 @@ config:
 ---
 flowchart TB
     clients["Internet clients"]
-    owner["Owner"]
+    kubectl["kubectl"]
+    ssh["SSH"]
 
     subgraph oci["OCI tenancy: root compartment, home region"]
         lbip["Reserved public IP<br/>k3s-lb-ip"]
         subgraph vcn["VCN k3s-vcn 10.0.0.0/16"]
-            igw["Internet gateway<br/>k3s-igw"]
-            rt["Route table<br/>k3s-rt<br/>0.0.0.0/0 to the internet gateway"]
-            sl["Security list<br/>k3s-sl"]
+            sl["Security list k3s-sl<br/>inbound traffic to the subnet:<br/>22, 6443 from admin_cidr<br/>80, 443 from anywhere<br/>all from the VCN"]
             subgraph subnet["Public subnet k3s-subnet 10.0.1.0/24"]
                 nlb["Network load balancer<br/>k3s-nlb"]
                 server["Server node<br/>k3s-server<br/>10.0.1.10<br/>ephemeral public IP"]
                 agent["Agent node<br/>k3s-agent-1<br/>10.0.1.11<br/>ephemeral public IP"]
             end
+            rt["Route table<br/>k3s-rt<br/>0.0.0.0/0 to the internet gateway"]
+            igw["Internet gateway<br/>k3s-igw"]
         end
         subgraph vault["Vault k3s-vault, type DEFAULT"]
             tokensecret["Secret<br/>k3s-join-token"]
@@ -34,15 +35,16 @@ flowchart TB
     end
 
     clients -- "HTTP 80, HTTPS 443" --> lbip
-    owner -- "kubectl 6443" --> lbip
-    owner -- "SSH 22" --> server & agent
-    lbip --- nlb
+    kubectl -- "6443" --> lbip
+    ssh ~~~ lbip
+    lbip -- "80, 443, 6443" --> sl
+    ssh -- "22" --> sl
+    sl --> nlb
+    sl -- "22" --> server & agent
     nlb -- "6443" --> server
     nlb -- "80, 443" --> server & agent
-    agent -- "join: 10.0.1.10:6443<br/>with the join token" --> server
-    subnet -.- rt
-    subnet -.- sl
-    rt -- "outbound traffic" --> igw
+    subnet -- "outbound" --> rt
+    rt --> igw
     igw ~~~ tokensecret & kcsecret
 ```
 
