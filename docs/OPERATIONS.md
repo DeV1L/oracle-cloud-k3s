@@ -54,6 +54,50 @@ pulumi stack output server_public_ip
 pulumi stack output agent_public_ip
 ```
 
+## Show the resources
+
+Pulumi shows the resources of the stack as it knows them. The OCI CLI shows the real resources in the tenancy.
+
+1. Show the resources and the outputs of the stack:
+
+```bash
+pulumi stack
+```
+
+2. Show the instances. Terminated instances are not shown:
+
+```bash
+oci compute instance list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --query 'data[?"lifecycle-state" != `TERMINATED`].{name:"display-name", state:"lifecycle-state", shape:shape}' --output table
+```
+
+3. Show the network load balancer and its public IP:
+
+```bash
+oci nlb network-load-balancer list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --query 'data.items[].{name:"display-name", state:"lifecycle-state", ip:"ip-addresses"[?"is-public"]."ip-address" | [0]}' --output table
+```
+
+4. Show the health of the load balancer. `CRITICAL` for a backend set means that no node answers on its port:
+
+```bash
+oci nlb network-load-balancer-health get --network-load-balancer-id "$(oci nlb network-load-balancer list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --display-name k3s-nlb --query 'data.items[0].id' --raw-output)" --query 'data'
+```
+
+5. Show the reserved public IP:
+
+```bash
+oci network public-ip list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --scope REGION --lifetime RESERVED --query 'data[].{name:"display-name", ip:"ip-address", state:"lifecycle-state"}' --output table
+```
+
+6. Show the VCN and the vault:
+
+```bash
+oci network vcn list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --query 'data[].{name:"display-name", cidr:"cidr-block", state:"lifecycle-state"}' --output table
+```
+
+```bash
+oci kms management vault list --all --compartment-id "$(pulumi config get k3s:compartment_ocid)" --query 'data[].{name:"display-name", type:"vault-type", state:"lifecycle-state"}' --output table
+```
+
 ## Check the capacity
 
 The script asks OCI whether a free micro instance can be created now. It creates no instance.

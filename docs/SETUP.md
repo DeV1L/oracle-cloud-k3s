@@ -137,6 +137,7 @@ cp .env.example .env && chmod 600 .env
 export AWS_ACCESS_KEY_ID='<access key>'
 export AWS_SECRET_ACCESS_KEY='<secret key>'
 export AWS_REGION='<region>'
+export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 export PULUMI_BACKEND_URL='s3://pulumi-state?endpoint=https://<namespace>.compat.objectstorage.<region>.oraclecloud.com&region=<region>&s3ForcePathStyle=true'
 export PULUMI_CONFIG_PASSPHRASE='<passphrase>'
 ```
